@@ -183,13 +183,21 @@ public class LodgeService {
         return reservations.findById(id).orElseThrow(() -> new LodgeException("That booking no longer exists."));
     }
 
-    /** Rooms free for every night of the stay (ignoring the booking being edited, if any). */
+    /**
+     * Rooms free for every night of the stay (ignoring the booking being edited, if any).
+     * Rooms under maintenance are left out, except the room the edited booking already has.
+     */
     public List<Room> freeRooms(LocalDate checkIn, LocalDate checkOut, long ignoreReservationId) {
         List<Room> free = new ArrayList<>();
         if (checkIn == null || checkOut == null || !checkOut.isAfter(checkIn)) {
             return free;
         }
+        long keepRoomId = ignoreReservationId == 0 ? -1
+                : reservations.findById(ignoreReservationId).map(res -> res.room().id()).orElse(-1L);
         for (Room r : rooms.findAll()) {
+            if (r.status() == RoomStatus.MAINTENANCE && r.id() != keepRoomId) {
+                continue;
+            }
             if (!reservations.roomTaken(r.id(), checkIn, checkOut, ignoreReservationId)) {
                 free.add(r);
             }
@@ -204,6 +212,7 @@ public class LodgeService {
         if (f.checkIn().isBefore(today())) {
             throw new LodgeException("The check-in date is in the past.");
         }
+        checkNotUnderMaintenance(f.room());
         long id = reservations.insert(f.guestName(), f.phone(), f.company(), f.companyPaysRoom(), f.room().id(),
                 f.checkIn(), f.checkOut(), rateCard.rateFor(f.room().type()), rateCard.vatPercent(), f.notes(),
                 session.username(), now());
@@ -243,6 +252,9 @@ public class LodgeService {
             throw new LodgeException("A " + old.status().toString().toLowerCase() + " stay cannot be changed.");
         }
         checkForm(f, id);
+        if (f.room().id() != old.room().id()) {
+            checkNotUnderMaintenance(f.room());   // moving to another room: it must be usable
+        }
         if (f.companyPaysRoom() || hasCompanyLines(id)) {
             if (!f.hasCompany()) {
                 throw new LodgeException("This folio has lines billed to a company. Keep the company name.");
@@ -562,6 +574,19 @@ public class LodgeService {
         }
         if (reservations.roomTaken(f.room().id(), f.checkIn(), f.checkOut(), ignoreId)) {
             throw new LodgeException("Room " + f.room().number() + " is already booked for some of those nights.");
+        }
+    }
+
+    /**
+     * A room under maintenance cannot take new bookings. A Dirty room can: it is
+     * cleaned before the guest arrives, and check-in still refuses it until then.
+     * The status is re-read from the database, as the form may be out of date.
+     */
+    private void checkNotUnderMaintenance(Room room) throws LodgeException {
+        Room current = rooms.findById(room.id()).orElseThrow(() -> new LodgeException("That room no longer exists."));
+        if (current.status() == RoomStatus.MAINTENANCE) {
+            throw new LodgeException("Room " + current.number() + " is under maintenance and cannot be booked. "
+                    + "Choose another room, or mark it Available on the Rooms page first.");
         }
     }
 
