@@ -8,7 +8,6 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -121,30 +120,34 @@ public class UserManagementDialog {
         TextField username = form.add("Username", new TextField());
         ComboBox<Role> role = form.add("Role", new ComboBox<>(FXCollections.observableArrayList(Role.values())));
         role.setValue(Role.STAFF);
-        PasswordField temp = form.add("Temporary password", new PasswordField());
-        form.addNote("Give the temporary password to the person. They must choose their own at first sign-in.");
-        form.onSubmit(() -> {
-            User created = auth.createUser(session, username.getText(), fullName.getText(),
-                    role.getValue(), temp.getText().toCharArray());
-            temp.clear();
-            showStatus("Created " + created.username() + " (" + created.role().getLabel() + ").", false);
-        });
+        form.addNote("The app makes a one-time password for them. They choose their own at first sign-in.");
+        AuthService.IssuedAccount[] issued = new AuthService.IssuedAccount[1];
+        form.onSubmit(() -> issued[0] = auth.createUser(session, username.getText(), fullName.getText(),
+                role.getValue()));
         if (form.showAndWait()) {
+            User created = issued[0].user();
+            showStatus("Created " + created.username() + " (" + created.role().getLabel() + ").", false);
             refresh();
+            TemporaryPasswordDialog.show(owner, theme, "Account created for " + created.fullName(),
+                    created.username(), issued[0].temporaryPassword());
         }
     }
 
     private void resetPassword(User user) {
-        FormDialog form = new FormDialog(owner, theme, "Reset password",
-                "Set a temporary password for " + user.username(), "Reset", "Cancel");
-        PasswordField temp = form.add("Temporary password", new PasswordField());
-        form.addNote("This also unlocks the account. The user must choose a new password at next sign-in.");
-        form.onSubmit(() -> {
-            auth.resetPassword(session, user.id(), temp.getText().toCharArray());
-            temp.clear();
-            showStatus("Password reset for " + user.username() + ".", false);
-        });
-        form.showAndWait();
+        if (!confirm("Reset the password for " + user.username() + "? Their current password stops working "
+                + "and the app gives you a one-time password to pass on. This also unlocks the account.")) {
+            return;
+        }
+        char[] temp;
+        try {
+            temp = auth.resetPassword(session, user.id());
+        } catch (AuthException e) {
+            showStatus(e.getMessage(), true);
+            return;
+        }
+        showStatus("Password reset for " + user.username() + ".", false);
+        refresh();
+        TemporaryPasswordDialog.show(owner, theme, "New password for " + user.fullName(), user.username(), temp);
     }
 
     private void toggleActive(User user) throws AuthException {

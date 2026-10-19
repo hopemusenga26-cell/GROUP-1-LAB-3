@@ -10,6 +10,7 @@ import lodgebilling.security.PasswordPolicy;
 import lodgebilling.security.Permission;
 import lodgebilling.security.Role;
 import lodgebilling.security.Session;
+import lodgebilling.security.TemporaryPassword;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -37,6 +38,7 @@ public class AuthService {
     // Hashed once, then checked against when the username does not exist, so a
     // wrong username takes as long as a wrong password (no timing hint about which)
     private final String dummyHash;
+    private final TemporaryPassword temporaryPasswords = new TemporaryPassword();
 
     public AuthService(UserRepository users, AuditLog audit, PasswordHasher hasher, Clock clock) {
         this.users = users;
@@ -157,6 +159,33 @@ public class AuthService {
         User created = createAccount(username, fullName, role, tempPassword, true);
         audit.record(session.username(), Action.USER_CREATED, created.username() + " as " + role.getLabel());
         return created;
+    }
+
+    /**
+     * A new account and the one-time password the app made for it. The admin is shown
+     * the password once to pass on; the caller should wipe it after showing it.
+     */
+    public record IssuedAccount(User user, char[] temporaryPassword) { }
+
+    /** Creates an account with a password the app generates (the admin does not invent one). */
+    public IssuedAccount createUser(Session session, String username, String fullName, Role role)
+            throws AuthException {
+        char[] temp = temporaryPasswords.next();
+        // createUser wipes what it is given, so hand it a copy and keep the original to show
+        User created = createUser(session, username, fullName, role, temp.clone());
+        return new IssuedAccount(created, temp);
+    }
+
+    /** Resets to a generated one-time password and returns it, for the admin to pass on. */
+    public char[] resetPassword(Session session, long userId) throws AuthException {
+        char[] temp = temporaryPasswords.next();
+        try {
+            resetPassword(session, userId, temp.clone());
+            return temp;
+        } catch (AuthException | RuntimeException e) {
+            PasswordHasher.wipe(temp);
+            throw e;
+        }
     }
 
     public void resetPassword(Session session, long userId, char[] tempPassword) throws AuthException {

@@ -591,3 +591,6 @@
 /* The frosted layer under each page of the main window */
 .page-area { -fx-background-color: rgba(240,246,255,0.55); }
 .root.dark .page-area { -fx-background-color: rgba(4,10,26,0.50); }
+
+/* The one-time password shown to an admin: big and monospaced, so 4 and 9 are easy to tell apart */
+.temp-password { -fx-font-family: "Consolas", "Menlo", monospace; -fx-font-size: 18px; -fx-font-weight: bold; }
