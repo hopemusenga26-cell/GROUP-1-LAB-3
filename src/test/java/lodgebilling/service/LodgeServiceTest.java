@@ -271,4 +271,34 @@ class LodgeServiceTest {
         assertEquals(1, d.roomsByStatus().get(RoomStatus.OCCUPIED));
         assertTrue(d.occupancyPercent() > 11 && d.occupancyPercent() < 12);   // 1 of 9
     }
+
+    @Test
+    void aRoomUnderMaintenanceCannotBeBookedButADirtyOneCan() throws LodgeException {
+        lodge.setRoomStatus(CLEANER, room("201"), RoomStatus.MAINTENANCE);
+        lodge.setRoomStatus(CLEANER, room("202"), RoomStatus.DIRTY);
+
+        assertThrows(LodgeException.class,
+                () -> lodge.book(DESK, form("John Phiri", "201", TODAY.plusDays(1), TODAY.plusDays(2))));
+        assertFalse(lodge.freeRooms(TODAY.plusDays(1), TODAY.plusDays(2), 0).contains(room("201")));
+
+        // Dirty: bookable ahead (it is cleaned before arrival), but not checked into yet
+        Reservation r = lodge.book(DESK, form("Mary Banda", "202", TODAY, TODAY.plusDays(1)));
+        assertThrows(LodgeException.class, () -> lodge.checkIn(DESK, r.id()));
+    }
+
+    @Test
+    void aBookingWhoseRoomGoesIntoMaintenanceCanStillBeEditedButNotMovedIntoAnother() throws LodgeException {
+        Reservation r = lodge.book(DESK, form("John Phiri", "301", TODAY.plusDays(3), TODAY.plusDays(4)));
+        lodge.setRoomStatus(CLEANER, room("301"), RoomStatus.MAINTENANCE);
+
+        // Changing the guest's details keeps the same room: allowed, and the room is still offered
+        lodge.update(DESK, r.id(), form("Johnny Phiri", "301", TODAY.plusDays(3), TODAY.plusDays(4)));
+        assertTrue(lodge.freeRooms(TODAY.plusDays(3), TODAY.plusDays(4), r.id()).contains(room("301")));
+
+        // Moving another booking into the broken room is refused
+        Reservation other = lodge.book(DESK, form("Mary Banda", "302", TODAY.plusDays(3), TODAY.plusDays(4)));
+        lodge.cancel(DESK, r.id());
+        assertThrows(LodgeException.class,
+                () -> lodge.update(DESK, other.id(), form("Mary Banda", "301", TODAY.plusDays(3), TODAY.plusDays(4))));
+    }
 }

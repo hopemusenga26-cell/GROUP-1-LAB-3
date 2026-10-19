@@ -13,6 +13,7 @@ import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationForm;
 import lodgebilling.model.ReservationStatus;
 import lodgebilling.model.Room;
+import lodgebilling.model.RoomStatus;
 import lodgebilling.service.LodgeService;
 import lodgebilling.view.FormDialog;
 import lodgebilling.view.Ui;
@@ -95,6 +96,10 @@ public final class ReservationDialog {
         Runnable reloadRooms = () -> {
             Room selected = rooms.getValue() != null ? rooms.getValue() : wanted;
             List<Room> free = lodge.freeRooms(arrive.getValue(), leave.getValue(), ignoreId);
+            if (mode == Mode.WALK_IN) {
+                // A walk-in moves in now, so only a clean, ready room will do
+                free = free.stream().filter(r -> r.status() == RoomStatus.AVAILABLE).toList();
+            }
             rooms.setItems(FXCollections.observableArrayList(free));
             rooms.setPromptText(free.isEmpty() ? "No room free for these dates" : "Choose a room");
             if (selected != null) {

@@ -6,8 +6,10 @@ public record Room(long id, String number, RoomType type, RoomStatus status) {
     public RoomType getType()     { return type; }
     public RoomStatus getStatus() { return status; }
 
+    /** "201 (Deluxe)", plus the status when the room is not ready, e.g. "201 (Deluxe) - Dirty". */
     @Override
     public String toString() {
-        return number + " (" + type + ")";
+        String name = number + " (" + type + ")";
+        return status == null || status == RoomStatus.AVAILABLE ? name : name + " - " + status;
     }
 }
