@@ -19,7 +19,6 @@ import lodgebilling.model.Bill;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.Money;
 import lodgebilling.data.AuditLog;
-import lodgebilling.service.AuthService;
 
 import java.util.List;
 import java.util.Optional;
@@ -137,10 +136,6 @@ public class Dialogs {
     /** @return true if the password was changed */
     public boolean changePassword(boolean forced, ChangePasswordDialog.Change change) {
         return ChangePasswordDialog.show(owner, model.themeProperty().get(), forced, change);
-    }
-
-    public void manageUsers(AuthService auth) {
-        new UserManagementDialog(owner, model.themeProperty().get(), auth, model.session()).showAndWait();
     }
 
     public void showAuditLog(List<AuditLog.Entry> entries) {

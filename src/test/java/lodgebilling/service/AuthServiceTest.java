@@ -151,4 +151,53 @@ class AuthServiceTest {
         assertTrue(actions.contains(AuditLog.Action.LOGIN));
         assertTrue(actions.contains(AuditLog.Action.LOGIN_FAILED));
     }
+
+    @Test
+    void theAppMakesTheTemporaryPasswordAndItWorksOnlyUntilReplaced() throws AuthException {
+        AuthService.IssuedAccount issued = auth.createUser(admin, "mary", "Mary Banda", Role.STAFF);
+        String temp = new String(issued.temporaryPassword());
+        assertTrue(temp.matches("[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}"), temp);
+
+        User mary = auth.login("mary", temp.toCharArray());
+        assertTrue(mary.mustChangePassword());
+        auth.changeOwnPassword(new Session(mary), temp.toCharArray(), pw("marys0wn"));
+        assertThrows(AuthException.class, () -> auth.login("mary", temp.toCharArray()));
+    }
+
+    @Test
+    void generatedPasswordsAreDifferentEachTime() throws AuthException {
+        String a = new String(auth.createUser(admin, "mary", "Mary Banda", Role.STAFF).temporaryPassword());
+        String b = new String(auth.createUser(admin, "joe", "Joe Mwale", Role.HOUSEKEEPING).temporaryPassword());
+        assertFalse(a.equals(b));
+    }
+
+    @Test
+    void resetGivesANewOneTimePasswordAndTheOldOneStopsWorking() throws AuthException {
+        User mary = auth.createUser(admin, "mary", "Mary Banda", Role.STAFF, pw("temp1234"));
+        String fresh = new String(auth.resetPassword(admin, mary.id()));
+
+        assertThrows(AuthException.class, () -> auth.login("mary", pw("temp1234")));
+        assertTrue(auth.login("mary", fresh.toCharArray()).mustChangePassword());
+    }
+
+    @Test
+    void onlyAnAdminCanIssuePasswords() throws AuthException {
+        User staff = auth.createUser(admin, "mary", "Mary Banda", Role.STAFF, pw("temp1234"));
+        Session desk = new Session(staff);
+        assertThrows(AccessDeniedException.class, () -> auth.createUser(desk, "x_user", "X User", Role.STAFF));
+        assertThrows(AccessDeniedException.class, () -> auth.resetPassword(desk, staff.id()));
+    }
+
+    @Test
+    void theStaffListShowsWhenEachPersonLastSignedIn() throws AuthException {
+        auth.createUser(admin, "mary", "Mary Banda", Role.STAFF, pw("temp1234"));
+        User before = auth.listUsers(admin).stream().filter(u -> u.username().equals("mary")).findFirst().orElseThrow();
+        assertEquals(null, before.lastLogin());   // never signed in yet
+
+        clock.advance(Duration.ofHours(2));
+        auth.login("mary", pw("temp1234"));
+        User after = auth.listUsers(admin).stream().filter(u -> u.username().equals("mary")).findFirst().orElseThrow();
+        assertEquals(clock.instant(), after.lastLogin());
+        assertEquals("Must set own password", after.getStatus());
+    }
 }

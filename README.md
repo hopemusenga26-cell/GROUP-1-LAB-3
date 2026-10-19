@@ -9,7 +9,9 @@ a dashboard and reports.
 ## Features
 
 - First-run setup: whoever installs the app creates the admin account (there is no built-in password)
-- Staff accounts with roles: **Admin**, **Front desk** and **Housekeeping**
+- Staff accounts with roles: **Admin**, **Front desk** and **Housekeeping**. There is no sign-up: only an admin
+  creates accounts, on the **Staff** page, and giving someone Admin needs a second confirmation
+- New and reset accounts get a one-time password made by the app (e.g. `k7mp-q4xr-9tbn`), shown to the admin once
 - Account lockout: 5 wrong passwords lock the account for 5 minutes
 - Change your own password; an admin can reset a password and force a change at next sign-in
 - **Rooms:** nine rooms seeded on first start (101-104 Standard, 201-203 Deluxe, 301-302 Family); admins can add more.
@@ -71,8 +73,10 @@ Run the tests with `gradlew.bat test` (or `./gradlew test`).
 ## First start
 
 The first time the app opens it asks you to create the **admin account**. Passwords need at least
-8 characters with a letter and a number. The admin can then add front-desk accounts from
-**Admin > Manage users**.
+8 characters with a letter and a number. The admin then adds everyone else on the
+**Staff** page (or **Admin > Staff accounts**, Ctrl+U): pick their role, and the app shows a one-time
+password to hand over in private. They choose their own password the first time they sign in.
+The Staff page also shows who still has to do that, and when each person last signed in.
 
 | Role         | Can do                                                                        |
 | ------------ | ----------------------------------------------------------------------------- |
@@ -102,7 +106,7 @@ Passwords are never stored: each one is kept as a salted PBKDF2 hash.
 | Ctrl+P   | Print receipt                         |
 | Ctrl+D   | Delete selected receipt (admin)       |
 | Ctrl+T   | Switch light/dark mode                |
-| Ctrl+U   | Manage users (admin)                  |
+| Ctrl+U   | Staff accounts (admin)                |
 | Ctrl+L   | Log out                               |
 | Ctrl+Q   | Close                                 |
 

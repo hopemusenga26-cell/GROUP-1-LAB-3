@@ -31,6 +31,7 @@ import lodgebilling.view.pages.PageContext;
 import lodgebilling.view.pages.ReportsPage;
 import lodgebilling.view.pages.ReservationDialog;
 import lodgebilling.view.pages.RoomsPage;
+import lodgebilling.view.pages.StaffPage;
 import lodgebilling.view.pages.StaysPage;
 import lodgebilling.view.pages.TapeChartPage;
 
@@ -67,14 +68,15 @@ public class MainView extends BorderPane {
     // Kept so it can be removed again at logout (the Scene outlives this view)
     private ChangeListener<Node> focusWatcher;
 
-    public MainView(BillingModel model, BillingActions actions, Stage stage, LodgeService lodge, AuditLog audit) {
+    public MainView(BillingModel model, BillingActions actions, Stage stage, LodgeService lodge, AuditLog audit,
+                    AuthService auth) {
         this.form = new BillFormView(actions, model.statusProperty());
         this.table = new BillTableView(model.bills(), actions::viewReceipt, actions::deleteSelected);
         this.toolBar = new AppToolBar(actions, model);
         this.pricePanel = new PricePanel(lodge.rateCard());
         this.dialogs = new Dialogs(stage, model, actions);
         this.header = new AppHeader(model, actions);
-        this.pageContext = new PageContext(stage, model, lodge, audit);
+        this.pageContext = new PageContext(stage, model, lodge, audit, auth);
         pageContext.setRefreshCurrentPage(this::refreshCurrent);
 
         // The aurora sits behind everything and fills the whole window
@@ -121,6 +123,7 @@ public class MainView extends BorderPane {
             case STAYS -> new StaysPage(pageContext);
             case ROOMS -> new RoomsPage(pageContext);
             case REPORTS -> new ReportsPage(pageContext);
+            case STAFF -> new StaffPage(pageContext);
             case QUICK_BILLS -> new Page() {
                 private final VBox node = new VBox(toolBar, billingScroll);
                 { VBox.setVgrow(billingScroll, Priority.ALWAYS); }
@@ -265,7 +268,7 @@ public class MainView extends BorderPane {
     public boolean printReceipt(Bill bill)  { return dialogs.printReceipt(bill); }
     public boolean confirmDelete(Bill bill) { return dialogs.confirmDelete(bill); }
     public void showAbout()                 { dialogs.showAbout(); }
-    public void manageUsers(AuthService auth) { dialogs.manageUsers(auth); }
+    public void manageUsers()               { showPage(AppPage.STAFF); }
     public void showAuditLog(List<AuditLog.Entry> entries) { dialogs.showAuditLog(entries); }
     public boolean changePassword(boolean forced, ChangePasswordDialog.Change change) {
         return dialogs.changePassword(forced, change);

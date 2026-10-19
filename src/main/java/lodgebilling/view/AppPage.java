@@ -9,7 +9,8 @@ public enum AppPage {
     STAYS("Stays & folios", Permission.MANAGE_RESERVATIONS),
     QUICK_BILLS("Receipts", Permission.CREATE_BILL),
     ROOMS("Rooms", Permission.UPDATE_ROOM_STATUS),
-    REPORTS("Reports", Permission.VIEW_REPORTS);
+    REPORTS("Reports", Permission.VIEW_REPORTS),
+    STAFF("Staff", Permission.MANAGE_USERS);
 
     private final String label;
     private final Permission permission;
