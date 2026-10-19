@@ -56,6 +56,9 @@ public class FolioWindow {
     private final long reservationId;
     private final Stage stage = new Stage();
     private final TableView<Row> ledger = new TableView<>();
+    // Shown only when they have something to say: a company on the bill, or a voided line
+    private final TableColumn<Row, String> billTo = Ui.column("Bill to", Row::billTo);
+    private final TableColumn<Row, String> note = Ui.column("Note", Row::note);
     private final VBox details = new VBox(6);
     private final VBox totals = new VBox(4);
     private final Label balanceDue = new Label();
@@ -69,10 +72,10 @@ public class FolioWindow {
 
     public void showAndWait() {
         buildLedger();
-        VBox left = Ui.card("Guest", details);
+        VBox left = Ui.card(null, details);   // the guest's name is the heading
         left.setPrefWidth(270);
         left.setMinWidth(250);
-        VBox right = Ui.card("Ledger", ledger, totals);
+        VBox right = Ui.card(null, ledger, totals);
         VBox.setVgrow(ledger, Priority.ALWAYS);
         HBox.setHgrow(right, Priority.ALWAYS);
         HBox body = new HBox(16, left, right);
@@ -115,18 +118,21 @@ public class FolioWindow {
         FolioSummary s = folio.summary();
         stage.setTitle("Folio " + r.reference() + " - " + r.guestName());
 
+        // Nights and rate are on the room line of the ledger, so they are not repeated here
         details.getChildren().setAll(
                 big(r.guestName()),
                 Ui.chip(r.status().toString(), r.status().styleClass()),
                 info("Booking", r.reference()),
                 info("Room", r.room().number() + " (" + r.room().type() + ")"),
                 info("Arrival", r.checkIn().format(Ui.DATE)),
-                info("Departure", r.checkOut().format(Ui.DATE)),
-                info("Nights", String.valueOf(r.nights())),
-                info("Rate", Money.format(r.nightlyRate()) + " / night"),
-                info("Phone", r.guestPhone().isBlank() ? "-" : r.guestPhone()),
-                info("Company", r.hasCompany() ? r.company() + (r.companyPaysRoom() ? " (pays room)" : "") : "-"),
-                info("Booked by", r.createdBy()));
+                info("Departure", r.checkOut().format(Ui.DATE)));
+        if (!r.guestPhone().isBlank()) {
+            details.getChildren().add(info("Phone", r.guestPhone()));
+        }
+        if (r.hasCompany()) {
+            details.getChildren().add(info("Company", r.company() + (r.companyPaysRoom() ? " (pays room)" : "")));
+        }
+        details.getChildren().add(info("Booked by", r.createdBy()));
         if (!r.notes().isBlank()) {
             Label n = new Label("Notes: " + r.notes());
             n.setWrapText(true);
@@ -155,6 +161,8 @@ public class FolioWindow {
                     e.voided() ? "VOID: " + e.voidReason() : "", e));
         }
         ledger.setItems(FXCollections.observableArrayList(rows));
+        billTo.setVisible(r.hasCompany());
+        note.setVisible(rows.stream().anyMatch(row -> !row.note().isEmpty()));
 
         totals.getChildren().setAll(
                 totalLine("Subtotal", s.subtotal()),
@@ -339,18 +347,16 @@ public class FolioWindow {
                 r -> r.when() == null ? "" : r.when().format(Ui.DATE_TIME));
         TableColumn<Row, String> type = Ui.column("Type", Row::type);
         TableColumn<Row, String> desc = Ui.column("Description", Row::description);
-        TableColumn<Row, String> to = Ui.column("Bill to", Row::billTo);
         TableColumn<Row, BigDecimal> amt = Ui.moneyColumn("Amount", Row::amount);
         TableColumn<Row, String> by = Ui.column("By", Row::by);
-        TableColumn<Row, String> note = Ui.column("Note", Row::note);
         when.setPrefWidth(125);
         type.setPrefWidth(120);
         desc.setPrefWidth(190);
-        to.setPrefWidth(120);
+        billTo.setPrefWidth(120);
         amt.setPrefWidth(105);
         by.setPrefWidth(70);
         note.setPrefWidth(110);
-        ledger.getColumns().setAll(List.of(when, type, desc, to, amt, by, note));
+        ledger.getColumns().setAll(List.of(when, type, desc, billTo, amt, by, note));
         ledger.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         ledger.setPlaceholder(new Label("No lines yet."));
         // Voided lines stay visible but struck through, so the history is never lost

@@ -19,7 +19,7 @@ public class LoginView extends AuthCard {
     private final PasswordField password;
 
     public LoginView(Handler handler, ObjectProperty<Theme> theme) {
-        super("Sign in", "Use the account your admin gave you.", theme);
+        super(null, null, theme);   // the Sign in button says what this screen is for
         username = field("Username", new TextField());
         password = field("Password", new PasswordField());
         Button signIn = new Button("Sign in");
@@ -31,8 +31,7 @@ public class LoginView extends AuthCard {
         });
         finish(signIn);
         // There is no sign-up on purpose: only an admin creates accounts and chooses their role
-        footnote("No account? Ask your manager to create one for you. "
-                + "Forgot your password? An admin can reset it.");
+        footnote("No account, or forgot your password? Ask an admin.");
     }
 
     @Override

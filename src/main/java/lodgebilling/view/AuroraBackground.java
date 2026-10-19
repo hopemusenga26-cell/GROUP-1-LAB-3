@@ -27,8 +27,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 /**
- * The window's backdrop: an aurora night. A deep sky full of twinkling stars, curtains
- * of green and violet light made of thin vertical rays that ripple and flicker, the dark
+ * The sign-in backdrop: an aurora night. A deep forest-green sky full of twinkling stars, curtains
+ * of mint and green light made of thin vertical rays that ripple and flicker, the dark
  * outline of hills along the bottom and, now and then, a shooting star.
  * Everything is placed as a fraction of the window, so it fits any size.
  */
@@ -38,13 +38,14 @@ public class AuroraBackground extends Pane {
     private record Curtain(double baseY, double height, double wave, double waveLength,
                            double speed, Color top, Color body, Color hem) { }
 
+    // The app's forest-to-mint greens, with one warm orange fringe like the app's main buttons
     private static final Curtain[] CURTAINS = {
         new Curtain(0.42, 0.30, 0.07, 0.9, 0.22,
-                Color.web("#b04dff"), Color.web("#2bff9a"), Color.web("#d8ffe9")),
+                Color.web("#ec7a45"), Color.web("#4fc9a4"), Color.web("#daf1de")),
         new Curtain(0.55, 0.36, 0.09, 1.4, -0.16,
-                Color.web("#7a3cff"), Color.web("#14e88a"), Color.web("#b9ffd8")),
+                Color.web("#235347"), Color.web("#8eb69b"), Color.web("#daf1de")),
         new Curtain(0.33, 0.22, 0.05, 0.7, 0.28,
-                Color.web("#ff4fd8"), Color.web("#3dffc0"), Color.web("#e6fff4")),
+                Color.web("#163832"), Color.web("#6fe3c6"), Color.web("#f1fbf3")),
     };
     private static final int RAYS_PER_CURTAIN = 110;
     private static final int STAR_COUNT = 170;
@@ -74,10 +75,10 @@ public class AuroraBackground extends Pane {
         sky.widthProperty().bind(widthProperty());
         sky.heightProperty().bind(heightProperty());
         sky.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
-                new Stop(0, Color.web("#010208")),
-                new Stop(0.45, Color.web("#030a1c")),
-                new Stop(0.80, Color.web("#06192b")),
-                new Stop(1, Color.web("#0a2a33"))));
+                new Stop(0, Color.web("#010706")),
+                new Stop(0.45, Color.web("#031312")),
+                new Stop(0.80, Color.web("#051f20")),
+                new Stop(1, Color.web("#0b2b26"))));
 
         // A faint green haze where the aurora meets the horizon
         horizonGlow.widthProperty().bind(widthProperty());
@@ -85,8 +86,8 @@ public class AuroraBackground extends Pane {
         horizonGlow.layoutYProperty().bind(heightProperty().multiply(0.55));
         horizonGlow.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
                 new Stop(0, Color.TRANSPARENT),
-                new Stop(0.7, Color.web("#1aff9c", 0.10)),
-                new Stop(1, Color.web("#1aff9c", 0.02))));
+                new Stop(0.7, Color.web("#8eb69b", 0.12)),
+                new Stop(1, Color.web("#8eb69b", 0.03))));
 
         Group starField = new Group();
         starSpots = new double[STAR_COUNT][2];
@@ -136,7 +137,7 @@ public class AuroraBackground extends Pane {
             double roll = 0.5 + 0.5 * Math.sin(i * 0.45) * Math.cos(i * 0.17);
             hillHeights[i] = 0.06 + roll * 0.07 + random.nextDouble() * 0.015;
         }
-        hills.setFill(Color.web("#010307"));
+        hills.setFill(Color.web("#010605"));
 
         shootingStar.setStroke(new LinearGradient(0, 0, 1, 0, true, CycleMethod.NO_CYCLE,
                 new Stop(0, Color.TRANSPARENT), new Stop(1, Color.web("#ffffff", 0.9))));

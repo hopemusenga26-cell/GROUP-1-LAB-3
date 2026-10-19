@@ -26,13 +26,11 @@ public class PricePanel extends VBox {
         refresh();
 
         Label rules = new Label(
-                Bill.DISCOUNT_MIN_NIGHTS + " nights or more: " + Bill.discountPercentLabel()
-                + " off the room charge.\n\n"
-                + "Extras get no discount. No VAT on receipts.\n\n"
-                + "Receipts are saved automatically and kept after you close the app.");
+                Bill.DISCOUNT_MIN_NIGHTS + "+ nights: " + Bill.discountPercentLabel()
+                + " off the room charge (not extras). No VAT on receipts.");
         rules.setWrapText(true);
         rules.getStyleClass().add("hint");
-        VBox.setMargin(rules, new Insets(14, 0, 0, 0));
+        VBox.setMargin(rules, new Insets(10, 0, 0, 0));
         getChildren().add(rules);
 
         getStyleClass().add("card");

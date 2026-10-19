@@ -22,8 +22,8 @@ import java.time.LocalDateTime;
  */
 public class BillingModel {
 
-    private static final StatusMessage READY =
-            StatusMessage.info("Ready.");   // the status bar is shared by every page now
+    // Nothing to report: the status bar (shared by every page) stays empty rather than saying "Ready."
+    private static final StatusMessage READY = StatusMessage.info("");
 
     private final BillRepository repository;
     private final AuditLog audit;

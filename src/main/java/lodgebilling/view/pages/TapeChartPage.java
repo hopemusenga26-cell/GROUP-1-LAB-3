@@ -10,7 +10,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
@@ -52,34 +51,25 @@ public class TapeChartPage implements Page {
         this.ctx = ctx;
         this.start = ctx.lodge().today().minusDays(1);
 
-        HBox buttons = Ui.row(
+        range.getStyleClass().add("card-title");
+        range.setMinWidth(Region.USE_PREF_SIZE);
+        // Only the bar colours need a key: each room already names its own status
+        HBox nav = Ui.row(
                 Ui.compact("< Week", () -> move(-7)),
                 Ui.compact("Today", () -> { start = ctx.lodge().today().minusDays(1); refresh(); }),
                 Ui.compact("Week >", () -> move(7)),
-                range);
-        range.getStyleClass().add("card-title");
-        range.setMinWidth(Region.USE_PREF_SIZE);
-        if (ctx.can(Permission.MANAGE_RESERVATIONS)) {
-            buttons.getChildren().addAll(Ui.spacer(), Ui.compact("+ Booking", () -> book(null, null)));
-        }
-        HBox legend = Ui.row(Ui.fixed("Key:"), Ui.chip("Booked", "stay-booked"), Ui.chip("In house", "stay-checked-in"),
-                Ui.chip("Left, paid", "stay-checked-out"), Ui.chip("Left, owing", "stay-owing"),
-                Ui.chip("Room: Available", "status-available"), Ui.chip("Dirty", "status-dirty"),
-                Ui.chip("Maintenance", "status-maintenance"));
-        VBox nav = new VBox(8, buttons, legend);
-        nav.setPadding(new Insets(14, 20, 6, 20));
+                range, Ui.spacer(),
+                Ui.chip("Booked", "stay-booked"), Ui.chip("In house", "stay-checked-in"),
+                Ui.chip("Left, paid", "stay-checked-out"), Ui.chip("Left, owing", "stay-owing"));
+        nav.setPadding(new Insets(14, 20, 10, 20));
 
         grid.getStyleClass().add("tape");
         ScrollPane scroll = new ScrollPane(grid);
         scroll.getStyleClass().add("main-scroll");
         scroll.setFitToWidth(false);
-        Label hint = new Label("Click a bar to open the folio. Click an empty cell to book that room from that night.");
-        hint.getStyleClass().add("hint");
-        VBox center = new VBox(8, scroll, hint);
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        center.setPadding(new Insets(6, 20, 16, 20));
+        BorderPane.setMargin(scroll, new Insets(0, 20, 16, 20));
         root.setTop(nav);
-        root.setCenter(center);
+        root.setCenter(scroll);
     }
 
     @Override
@@ -144,6 +134,9 @@ public class TapeChartPage implements Page {
                     if (ctx.can(Permission.MANAGE_RESERVATIONS) && !night.isBefore(today)) {
                         cell.setOnMouseClicked(e -> book(room, night));
                         cell.getStyleClass().add("tape-free");
+                        Tooltip tip = new Tooltip("Book room " + room.number() + " from " + night.format(Ui.DAY));
+                        tip.setShowDelay(Duration.millis(400));
+                        Tooltip.install(cell, tip);
                     }
                     grid.add(cell, i + 1, gridRow);
                 }
@@ -181,7 +174,8 @@ public class TapeChartPage implements Page {
         Tooltip tip = new Tooltip(r.reference() + "  " + r.guestName() + "\n"
                 + r.checkIn().format(Ui.DATE) + " to " + r.checkOut().format(Ui.DATE) + " (" + r.nights() + " nights)\n"
                 + r.status() + (s == null ? "" : "\nBalance due: " + Money.format(s.balance()))
-                + (r.hasCompany() ? "\nCompany: " + r.company() : ""));
+                + (r.hasCompany() ? "\nCompany: " + r.company() : "")
+                + "\nClick to open the folio");
         tip.setShowDelay(Duration.millis(200));
         Tooltip.install(bar, tip);
         bar.setOnMouseClicked(e -> {

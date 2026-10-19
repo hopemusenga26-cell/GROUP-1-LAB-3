@@ -12,10 +12,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 import lodgebilling.data.ReportRepository.DailyStat;
 import lodgebilling.model.Money;
 import lodgebilling.service.LodgeService;
@@ -32,6 +33,8 @@ import java.util.List;
 
 /** Admin reports: daily revenue and occupancy (ADR, RevPAR) and who still owes money, with CSV export. */
 public class ReportsPage implements Page {
+
+    private static final String REVENUE = "Room revenue is nights sold x booked rate, before discount and VAT.";
 
     private final PageContext ctx;
     private final DatePicker from = new DatePicker();
@@ -52,27 +55,22 @@ public class ReportsPage implements Page {
 
         from.setPrefWidth(150);
         to.setPrefWidth(150);
-        HBox controls = Ui.row(Ui.fixed("From"), from, Ui.fixed("to"), to, Ui.compact("Run report", this::refresh),
-                Ui.spacer(), Ui.compact("Export daily CSV", this::exportDaily),
-                Ui.compact("Export balances CSV", this::exportOwing));
+        // The report follows the dates as they are picked, so there is no Run button
+        from.valueProperty().addListener((o, a, b) -> refresh());
+        to.valueProperty().addListener((o, a, b) -> refresh());
+        HBox controls = Ui.row(Ui.fixed("From"), from, Ui.fixed("to"), to);
 
         buildDailyTable();
         buildOwingTable();
-        chart.setTitle("Payments received per day (K)");
         chart.setLegendVisible(false);
         chart.setAnimated(false);
         chart.setPrefHeight(240);
 
-        VBox dailyCard = Ui.card("Daily figures", daily);
-        VBox chartCard = Ui.card("Cash in", chart);
-        Label note = new Label("Room revenue is nights sold x booked rate, before discount and VAT. "
-                + "ADR = room revenue / rooms sold. RevPAR = room revenue / all rooms. "
-                + "Payments include receipts.");
-        note.getStyleClass().add("hint");
-        note.setWrapText(true);
+        VBox dailyCard = Ui.card("Daily figures", List.of(Ui.compact("Export CSV", this::exportDaily)), daily);
+        VBox chartCard = Ui.card("Payments received per day", chart);
+        VBox owingCard = Ui.card("Outstanding balances", List.of(Ui.compact("Export CSV", this::exportOwing)), owing);
 
-        VBox content = new VBox(14, controls, metrics, dailyCard, chartCard, note,
-                Ui.card("Outstanding balances (in house or checked out)", owing));
+        VBox content = new VBox(14, controls, metrics, dailyCard, chartCard, owingCard);
         content.setPadding(new Insets(16, 20, 20, 20));
         root = new ScrollPane(content);
         root.setFitToWidth(true);
@@ -100,13 +98,18 @@ public class ReportsPage implements Page {
             metrics.getChildren().setAll(
                     Ui.metric("Room nights sold", String.valueOf(sold), null),
                     Ui.metric("Occupancy", available == 0 ? "0%" : String.format("%.1f%%", 100.0 * sold / available),
-                            "metric-occupied"),
-                    Ui.metric("ADR", sold == 0 ? "-" : Money.format(
+                            null),
+                    explained(Ui.metric("ADR", sold == 0 ? "-" : Money.format(
                             revenue.divide(BigDecimal.valueOf(sold), 2, RoundingMode.HALF_UP)), null),
-                    Ui.metric("RevPAR", available == 0 ? "-" : Money.format(
+                            "Average daily rate: room revenue / room nights sold.\n" + REVENUE),
+                    explained(Ui.metric("RevPAR", available == 0 ? "-" : Money.format(
                             revenue.divide(BigDecimal.valueOf(available), 2, RoundingMode.HALF_UP)), null),
-                    Ui.metric("Payments received", Money.format(cash), "metric-ok"),
-                    Ui.metric("Owed to the lodge", Money.format(owed), owed.signum() > 0 ? "metric-overdue" : "metric-ok"));
+                            "Revenue per available room: room revenue / all rooms.\n" + REVENUE),
+                    explained(Ui.metric("Payments received", Money.format(cash), null),
+                            "Includes receipts from the Receipts page."),
+                    explained(Ui.metric("Owed to the lodge", Money.format(owed),
+                            owed.signum() > 0 ? "metric-overdue" : null),
+                            "Guests in house or checked out who have not paid in full."));
 
             XYChart.Series<String, Number> series = new XYChart.Series<>();
             for (DailyStat d : stats) {
@@ -114,6 +117,14 @@ public class ReportsPage implements Page {
             }
             chart.getData().setAll(List.of(series));
         });
+    }
+
+    /** How a figure is worked out, shown when the mouse rests on its tile. */
+    private static VBox explained(VBox metric, String how) {
+        Tooltip tip = new Tooltip(how);
+        tip.setShowDelay(Duration.millis(300));
+        Tooltip.install(metric, tip);
+        return metric;
     }
 
     private void buildDailyTable() {
@@ -179,7 +190,7 @@ public class ReportsPage implements Page {
 
     private void export(String name, List<String> header, List<List<Object>> rows, String what) {
         if (rows.isEmpty()) {
-            ctx.error("Nothing to export. Run the report first.");
+            ctx.error("Nothing to export.");
             return;
         }
         FileChooser chooser = new FileChooser();

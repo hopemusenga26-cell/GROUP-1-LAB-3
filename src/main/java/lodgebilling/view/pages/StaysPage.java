@@ -63,24 +63,29 @@ public class StaysPage implements Page {
         filter.setValue(Filter.CURRENT);
         filter.valueProperty().addListener((o, a, b) -> refresh());
         search.setPromptText("Search guest, company, room or BK-number");
-        search.setPrefWidth(300);
+        search.setPrefWidth(280);
         search.textProperty().addListener((o, a, b) -> refresh());
 
-        HBox actions = Ui.row(
-                Ui.button("New booking", this::newBooking),
-                Ui.button("Walk-in", this::walkIn),
-                Ui.button("Open folio", this::openFolio),
-                Ui.button("Check in", this::checkIn),
-                Ui.button("Check out", this::checkOut));
-        Button cancel = Ui.button("Cancel booking", this::cancelBooking);
+        // New booking and Walk-in are in the sidebar; these act on the selected stay
+        Button open = Ui.compact("Open folio", this::openFolio);
+        Button in = Ui.compact("Check in", this::checkIn);
+        Button out = Ui.compact("Check out", this::checkOut);
+        Button cancel = Ui.compact("Cancel booking", this::cancelBooking);
         cancel.getStyleClass().add("danger");
-        actions.getChildren().add(cancel);
+        table.getSelectionModel().selectedItemProperty().addListener((obs, old, r) -> {
+            open.setDisable(r == null);
+            in.setDisable(r == null || r.status() != ReservationStatus.BOOKED);
+            out.setDisable(r == null || r.status() != ReservationStatus.CHECKED_IN);
+            cancel.setDisable(r == null || r.status() != ReservationStatus.BOOKED);
+        });
+        for (Button b : List.of(open, in, out, cancel)) {
+            b.setDisable(true);
+        }
 
         buildTable();
-        VBox card = Ui.card("Stays", Ui.row(new Label("Show"), filter, search), table);
+        HBox bar = Ui.row(Ui.fixed("Show"), filter, search, Ui.spacer(), open, in, out, cancel);
         VBox.setVgrow(table, Priority.ALWAYS);
-        VBox.setVgrow(card, Priority.ALWAYS);
-        root = new VBox(12, actions, card);
+        root = new VBox(12, bar, table);
         root.setPadding(new Insets(16, 20, 16, 20));
     }
 
@@ -148,19 +153,6 @@ public class StaysPage implements Page {
             ctx.error("Select a stay in the table first.");
         }
         return r;
-    }
-
-    private void newBooking() {
-        ReservationDialog.show(ctx, ReservationDialog.Mode.BOOK, null, null, null)
-                .ifPresent(r -> ctx.success("Booked " + r.reference() + ": " + r.guestName() + ", room "
-                        + r.room().number() + "."));
-        refresh();
-    }
-
-    private void walkIn() {
-        ReservationDialog.show(ctx, ReservationDialog.Mode.WALK_IN, null, null, null)
-                .ifPresent(r -> ctx.success(r.guestName() + " checked in to room " + r.room().number() + "."));
-        refresh();
     }
 
     private void openFolio() {

@@ -30,7 +30,7 @@ a dashboard and reports.
 - Receipts saved in a SQLite database, so they survive closing the app (R001, R002, ...)
 - View, print and delete receipts (deleting is admin-only)
 - Audit log of sign-ins, lockouts, saved and deleted receipts and account changes (admin-only)
-- Light and dark mode over an animated aurora background
+- Light (warm stone) and dark (forest green) themes, with an animated aurora behind the sign-in screen
 - Keyboard shortcuts for common actions
 
 ## Billing rules

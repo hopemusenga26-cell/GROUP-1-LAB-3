@@ -7,9 +7,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lodgebilling.data.AuditLog;
 import lodgebilling.model.DashboardData;
@@ -47,21 +49,21 @@ public class DashboardPage implements Page {
 
     public DashboardPage(PageContext ctx) {
         this.ctx = ctx;
-        VBox arrivalsCard = Ui.card("Arrivals (booked, not yet in)", arrivals);
+        // "Due" rather than "today": late arrivals and departures stay on the lists
+        VBox arrivalsCard = Ui.card("Arrivals due", arrivals);
         VBox departuresCard = Ui.card("Departures due", departures);
         HBox.setHgrow(arrivalsCard, Priority.ALWAYS);
         HBox.setHgrow(departuresCard, Priority.ALWAYS);
         arrivalsCard.setPrefWidth(400);
         departuresCard.setPrefWidth(400);
-        Label hint = new Label("Double-click a guest to open their folio.");
-        hint.getStyleClass().add("hint");
 
         VBox rooms = Ui.card("Rooms", roomChips);
         VBox feed = Ui.card("Recent activity", activity);
         HBox.setHgrow(feed, Priority.ALWAYS);
         rooms.setPrefWidth(360);
+        rooms.setMaxHeight(Region.USE_PREF_SIZE);   // just the chips, not stretched to the activity list
 
-        VBox content = new VBox(14, metrics, new HBox(14, arrivalsCard, departuresCard), hint,
+        VBox content = new VBox(14, metrics, new HBox(14, arrivalsCard, departuresCard),
                 new HBox(14, rooms, feed));
         content.setPadding(new Insets(16, 20, 20, 20));
         root = new ScrollPane(content);
@@ -78,14 +80,13 @@ public class DashboardPage implements Page {
     public void refresh() {
         ctx.attempt(() -> {
             DashboardData d = ctx.lodge().dashboard(ctx.session());
+            // Arrivals and departures are counted by their tables below, so they get no tile
             metrics.getChildren().setAll(
-                    Ui.metric("Arrivals today", String.valueOf(d.arrivals().size()), "metric-pending"),
-                    Ui.metric("Departures due", String.valueOf(d.departures().size()), null),
-                    Ui.metric("Occupancy (" + d.inHouse() + " of " + d.totalRooms() + ")",
-                            String.format("%.0f%%", d.occupancyPercent()), "metric-occupied"),
+                    Ui.metric("Occupancy (" + d.inHouse() + " of " + d.totalRooms() + " rooms)",
+                            String.format("%.0f%%", d.occupancyPercent()), null),
                     Ui.metric("Outstanding balances", Money.format(d.outstanding()),
-                            d.outstanding().signum() > 0 ? "metric-overdue" : "metric-ok"),
-                    Ui.metric("Payments today", Money.format(d.paymentsToday()), "metric-ok"));
+                            d.outstanding().signum() > 0 ? "metric-overdue" : null),
+                    Ui.metric("Payments today", Money.format(d.paymentsToday()), null));
             arrivals.setItems(FXCollections.observableArrayList(d.arrivals()));
             departures.setItems(FXCollections.observableArrayList(d.departures()));
             roomChips.getChildren().clear();
@@ -121,6 +122,7 @@ public class DashboardPage implements Page {
         t.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         t.setPlaceholder(new Label(empty));
         t.setPrefHeight(180);
+        t.setTooltip(new Tooltip("Double-click a guest to open their folio"));
         t.setOnMouseClicked(e -> {
             Reservation r = t.getSelectionModel().getSelectedItem();
             if (e.getClickCount() == 2 && r != null) {

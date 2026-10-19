@@ -20,8 +20,7 @@ public class SetupView extends AuthCard {
 
     public SetupView(Handler handler, ObjectProperty<Theme> theme) {
         super("Create the admin account",
-                "First run: there are no accounts yet. The admin can add staff accounts later. "
-                        + "Passwords need " + PasswordPolicy.MIN_LENGTH + "+ characters with a letter and a number.", theme);
+                "Passwords need " + PasswordPolicy.MIN_LENGTH + "+ characters, with a letter and a number.", theme);
         TextField fullName = field("Your full name", new TextField());
         TextField username = field("Username", new TextField());
         PasswordField password = field("Password", new PasswordField());

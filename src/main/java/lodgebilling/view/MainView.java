@@ -55,11 +55,7 @@ public class MainView extends BorderPane {
     private final ScrollPane billingScroll;
     private final AppHeader header;
     private final PageContext pageContext;
-    private final AuroraBackground aurora = new AuroraBackground();
-    // A frosted pane under every page, so text never sits straight on the bright sky
     private final StackPane pageArea = new StackPane();
-    private VBox top;
-    private VBox sidebar;
 
     private final Map<AppPage, Page> pages = new EnumMap<>(AppPage.class);
     private final Map<AppPage, ToggleButton> navButtons = new EnumMap<>(AppPage.class);
@@ -78,10 +74,7 @@ public class MainView extends BorderPane {
         this.header = new AppHeader(model, actions);
         this.pageContext = new PageContext(stage, model, lodge, audit, auth);
         pageContext.setRefreshCurrentPage(this::refreshCurrent);
-
-        // The aurora sits behind everything and fills the whole window
-        aurora.setManaged(false);
-        getChildren().add(aurora);
+        toolBar.disableWhen(table.getSelectionModel().selectedItemProperty().isNull());
 
         billingScroll = new ScrollPane(buildBillingContent());
         billingScroll.setFitToWidth(true);
@@ -97,16 +90,14 @@ public class MainView extends BorderPane {
             }
         }
 
-        top = new VBox(new AppMenuBar(actions, model, visible, this::showPage), header);
-        setTop(top);
-        sidebar = buildSidebar(visible);
-        setLeft(sidebar);
-        StatusBar status = new StatusBar(model.statusProperty());
-        BorderPane.setMargin(status, new Insets(0, 20, 12, 20));
-        setBottom(status);
+        setTop(new AppMenuBar(actions, model, visible, this::showPage));
+        setLeft(buildSidebar(visible));
+        setBottom(new StatusBar(model.statusProperty()));
 
+        // The header names the page, so it sits over the page rather than across the sidebar
         pageArea.getStyleClass().add("page-area");
-        setCenter(pageArea);
+        VBox.setVgrow(pageArea, Priority.ALWAYS);
+        setCenter(new VBox(header, pageArea));
         if (!visible.isEmpty()) {
             showPage(visible.get(0));
         }
@@ -125,9 +116,7 @@ public class MainView extends BorderPane {
             case REPORTS -> new ReportsPage(pageContext);
             case STAFF -> new StaffPage(pageContext);
             case QUICK_BILLS -> new Page() {
-                private final VBox node = new VBox(toolBar, billingScroll);
-                { VBox.setVgrow(billingScroll, Priority.ALWAYS); }
-                @Override public Node node() { return node; }
+                @Override public Node node() { return billingScroll; }
                 @Override public void refresh() { pricePanel.refresh(); }
             };
         };
@@ -136,17 +125,20 @@ public class MainView extends BorderPane {
     private VBox buildSidebar(List<AppPage> visible) {
         VBox side = new VBox(6);
         side.getStyleClass().add("sidebar");
+        Label name = new Label("Lodge Billing");
+        name.getStyleClass().add("app-title");
+        side.getChildren().add(name);
         if (pageContext.can(Permission.MANAGE_RESERVATIONS)) {
-            // Quick actions, reachable from every page
-            Button book = Ui.button("+ New booking", () -> quickBook(ReservationDialog.Mode.BOOK));
+            // Quick actions, reachable from every page (the pages do not repeat them)
+            Button book = Ui.button("New booking", () -> quickBook(ReservationDialog.Mode.BOOK));
             Button walkIn = Ui.button("Walk-in", () -> quickBook(ReservationDialog.Mode.WALK_IN));
-            book.getStyleClass().add("quick-action");
+            book.getStyleClass().addAll("quick-action", "quick-primary");
             walkIn.getStyleClass().add("quick-action");
             book.setMaxWidth(Double.MAX_VALUE);
             walkIn.setMaxWidth(Double.MAX_VALUE);
+            VBox.setMargin(walkIn, new Insets(0, 0, 14, 0));   // a gap before the pages
             side.getChildren().addAll(book, walkIn);
         }
-        side.getChildren().add(sideLabel(visible.size() > 1 ? "Go to   (Ctrl+1 to " + visible.size() + ")" : "Go to"));
         for (int i = 0; i < visible.size(); i++) {
             AppPage p = visible.get(i);
             ToggleButton b = new ToggleButton(p.label());
@@ -159,12 +151,6 @@ public class MainView extends BorderPane {
             side.getChildren().add(b);
         }
         return side;
-    }
-
-    private static Label sideLabel(String text) {
-        Label l = new Label(text);
-        l.getStyleClass().add("side-label");
-        return l;
     }
 
     private void quickBook(ReservationDialog.Mode mode) {
@@ -206,22 +192,18 @@ public class MainView extends BorderPane {
         HBox.setHgrow(form, Priority.ALWAYS);
         HBox formAndPrices = new HBox(16, form, pricePanel);
 
-        Label savedLabel = new Label("Saved receipts");
-        savedLabel.getStyleClass().add("card-title");
+        // The receipt buttons sit on the table they act on
         VBox.setVgrow(table, Priority.ALWAYS);
-        VBox tableCard = new VBox(10, savedLabel, table);
-        tableCard.getStyleClass().add("card");
+        VBox tableCard = Ui.card("Saved receipts", List.of(toolBar), table);
         VBox.setVgrow(tableCard, Priority.ALWAYS);
 
         VBox content = new VBox(12, formAndPrices, tableCard);
-        content.setPadding(new Insets(16, 20, 12, 20));
+        content.setPadding(new Insets(16, 20, 16, 20));
         return content;
     }
 
     /** Call once the scene exists: focus behaviour that needs the whole scene. */
     public void install(Scene scene) {
-        Motion.liftButtons(this);
-        Motion.enter(top, sidebar, getCenter());
         // Deselect the row when focus leaves the table, except when it goes to
         // a button that needs the selection (View receipt / Delete)
         focusWatcher = (obs, oldOwner, newOwner) -> {
@@ -240,18 +222,10 @@ public class MainView extends BorderPane {
 
     /** Call before the scene switches to another screen (logout). */
     public void uninstall(Scene scene) {
-        aurora.stop();
         if (focusWatcher != null) {
             scene.focusOwnerProperty().removeListener(focusWatcher);
             focusWatcher = null;
         }
-    }
-
-    @Override
-    protected void layoutChildren() {
-        super.layoutChildren();
-        // the backdrop fills the whole window, behind the bars and the cards
-        aurora.resizeRelocate(0, 0, getWidth(), getHeight());
     }
 
     // ---------- What the controller can ask of the screen ----------

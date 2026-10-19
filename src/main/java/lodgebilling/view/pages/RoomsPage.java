@@ -3,7 +3,9 @@ package lodgebilling.view.pages;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -12,6 +14,7 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
@@ -42,22 +45,25 @@ public class RoomsPage implements Page {
 
     public RoomsPage(PageContext ctx) {
         this.ctx = ctx;
-        HBox actions = Ui.row(
-                Ui.button("Mark clean (Available)", () -> setStatus(RoomStatus.AVAILABLE)),
-                Ui.button("Mark dirty", () -> setStatus(RoomStatus.DIRTY)),
-                Ui.button("Maintenance", () -> setStatus(RoomStatus.MAINTENANCE)));
-        if (ctx.can(Permission.MANAGE_ROOMS)) {
-            actions.getChildren().addAll(Ui.spacer(), Ui.button("Add room", this::addRoom),
-                    Ui.button("Rates & VAT", this::editRates));
+        // Occupied is not offered: a room becomes Occupied only through check-in
+        Button clean = Ui.compact("Mark clean", () -> setStatus(RoomStatus.AVAILABLE));
+        Button dirty = Ui.compact("Mark dirty", () -> setStatus(RoomStatus.DIRTY));
+        Button repair = Ui.compact("Maintenance", () -> setStatus(RoomStatus.MAINTENANCE));
+        for (Button b : List.of(clean, dirty, repair)) {
+            b.disableProperty().bind(group.selectedToggleProperty().isNull());
         }
+        HBox actions = Ui.row(clean, dirty, repair, Ui.spacer());
+        if (ctx.can(Permission.MANAGE_ROOMS)) {
+            actions.getChildren().addAll(Ui.compact("Add room", this::addRoom),
+                    Ui.compact("Rates & VAT", this::editRates));
+        }
+        tiles.setRowValignment(VPos.TOP);
+        tiles.setPadding(new Insets(4, 4, 12, 4));   // room for the tiles' shadow and selection glow
         ScrollPane scroll = new ScrollPane(tiles);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("main-scroll");
-        Label hint = new Label("Select a room, then choose its new state. A room becomes Occupied only "
-                + "through check-in, and Dirty automatically at check-out.");
-        hint.getStyleClass().add("hint");
-        hint.setWrapText(true);
-        root = new VBox(12, actions, counts, Ui.card("Rooms", hint, scroll));
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        root = new VBox(12, actions, counts, scroll);
         root.setPadding(new Insets(16, 20, 16, 20));
     }
 
@@ -111,7 +117,8 @@ public class RoomsPage implements Page {
         t.setUserData(room.id());
         t.setToggleGroup(group);
         t.getStyleClass().addAll("room-tile", "tile-" + room.status().name().toLowerCase());
-        t.setPrefSize(180, 120);
+        // Tall enough for the guest line, so every tile in a row is the same size
+        t.setPrefSize(184, 132);
         if (selectedId != null && selectedId == room.id()) {
             t.setSelected(true);
         }

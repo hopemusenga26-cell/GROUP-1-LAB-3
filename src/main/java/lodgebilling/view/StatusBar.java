@@ -14,7 +14,7 @@ public class StatusBar extends Label {
         setAccessibleText("Status message");
         setWrapText(true);
         setMaxWidth(Double.MAX_VALUE);
-        getStyleClass().add("status");
+        getStyleClass().addAll("status", "status-bar");
 
         message.addListener((obs, old, current) -> show(current));
         show(message.get());

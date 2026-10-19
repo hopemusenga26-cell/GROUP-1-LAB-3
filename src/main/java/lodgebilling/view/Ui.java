@@ -21,6 +21,7 @@ import lodgebilling.model.Theme;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -33,17 +34,27 @@ public final class Ui {
 
     private Ui() { }
 
-    /** A rounded panel with a serif heading. */
+    /** A rounded panel with a serif heading, or no heading when the title is null. */
     public static VBox card(String title, Node... content) {
-        Label heading = new Label(title);
-        heading.getStyleClass().add("card-title");
-        VBox box = new VBox(10, heading);
+        return card(title, List.of(), content);
+    }
+
+    /** A panel whose heading has buttons on the right, for actions on what the panel shows. */
+    public static VBox card(String title, List<? extends Node> actions, Node... content) {
+        VBox box = new VBox(10);
+        if (title != null) {
+            Label heading = new Label(title);
+            heading.getStyleClass().add("card-title");
+            HBox top = row(heading, spacer());
+            top.getChildren().addAll(actions);
+            box.getChildren().add(top);
+        }
         box.getChildren().addAll(content);
         box.getStyleClass().add("card");
         return box;
     }
 
-    /** A big number with a caption, for dashboards. */
+    /** A number with what it counts, for dashboards. "metric-overdue" colours the number red. */
     public static VBox metric(String caption, String value, String styleClass) {
         Label v = new Label(value);
         v.getStyleClass().add("metric-value");

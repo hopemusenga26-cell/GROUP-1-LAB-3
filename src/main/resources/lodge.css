@@ -1,152 +1,141 @@
 /* =====================================================================
    Colour palettes. Everything below uses these names, so a theme is just
    a different set of values. ".dark" is added to the root by the app.
-   Both themes sit over the aurora night sky and borrow its colours:
-   aurora green for actions and focus, violet for selection and edges.
-   Light: frosted ice glass with deep navy ink.
-   Dark: smoked navy glass with mint ink.
+   Soft, tactile surfaces: rounded panels and pill buttons that sit up off
+   the page with a gentle shadow, lit from the top-left.
+   The forest greens #051F20 #0B2B26 #163832 #235347 #8EB69B #DAF1DE carry
+   the app (sidebar, ink, selection). One warm orange marks the main action
+   and keyboard focus; a mint glow marks what is selected.
+   Light: a warm stone page with forest ink. Dark: the forest greens themselves.
    ===================================================================== */
 .root {
-    /* page background gradient (seen only behind dialogs) */
-    -bg-1: #f6f9ff;
-    -bg-2: #eaf1fb;
-    -bg-3: #dde6f5;
-    /* glass surfaces */
-    -glass-hi: rgba(248,251,255,0.88);
-    -glass-lo: rgba(230,238,252,0.66);
-    -glass-border: rgba(90,110,170,0.35);
-    -spec: rgba(255,255,255,0.95);
-    -caustic: rgba(200,255,235,0.70);        /* a mint glow pooled in the bottom corner */
-    -gloss: rgba(255,255,255,0.78);          /* bright upper half of a glossy surface */
-    -gloss-soft: rgba(255,255,255,0.26);     /* where that half fades out */
-    -streak: rgba(255,255,255,0.55);         /* the diagonal light streak across a panel */
-    -edge: rgba(255,255,255,0.95);           /* rim light, top-left */
-    -edge-2: rgba(122,77,255,0.60);          /* aurora violet rim, bottom-right */
-    -rim: rgba(20,30,70,0.20);
-    -shadow: rgba(0,6,24,0.50);
-    -header-hi: rgba(248,251,255,0.93);
-    -header-lo: rgba(232,240,252,0.82);
-    -bar-bg: rgba(246,249,255,0.95);
-    -toolbar-bg: rgba(238,245,255,0.86);
+    /* the page, lit from the top-left */
+    -page-bg: radial-gradient(center 18% 0%, radius 100%, #f8f5f0 0%, #e9e4dc 55%, #ddd6cc 100%);
+    -surface: #f4f0ea;
+    -surface-hi: #fbf9f6;
+    -card-edge: linear-gradient(to bottom, rgba(255,255,255,0.95), #e0d9cf);
+    -line: #e0d9cf;
+    -shadow: rgba(70,55,40,0.16);
+    -btn-shadow: rgba(70,55,40,0.22);
     /* text */
-    -text: #16213a;
-    -text-muted: #5a6688;
-    -title: #0b1630;
-    -title-a: #0b8f72;                       /* the app title runs from aurora green... */
-    -title-b: #5b3fc4;                       /* ...to violet */
-    /* accent */
-    -accent: #0b8f72;
-    -primary-top: #13b58e;                   /* the main button runs left to right */
-    -primary-bottom: #6f46e0;
-    -primary-hover-top: #22cfa3;
-    -primary-hover-bottom: #8158f0;
-    -primary-text: #ffffff;
-    -sel-text: #ffffff;
+    -text: #163832;
+    -text-muted: #5e6f67;
+    -title: #051f20;
+    -title-a: #0b2b26;                       /* the sign-in title runs from forest... */
+    -title-b: #2f6b5b;                       /* ...to a lighter green */
+    -accent: #235347;
+    -glow: #4fc9a4;                          /* the mint glow round whatever is selected */
+    /* the main action: a warm orange pill with dark ink (white on this orange is too faint) */
+    -primary-top: #f6a066;
+    -primary-bottom: #ec7a45;
+    -primary-hover-top: #f8b07e;
+    -primary-hover-bottom: #f08a55;
+    -primary-text: #051f20;
+    -primary-glow: rgba(236,122,69,0.45);
+    -focus: #ec7a45;
     /* inputs and buttons */
-    -input-bg: rgba(255,255,255,0.82);
-    -input-focus: #ffffff;
-    -input-border: rgba(70,90,150,0.30);
-    -inset-shadow: rgba(20,30,70,0.22);
-    -btn-bg: rgba(255,255,255,0.76);
-    -btn-hover: rgba(255,255,255,0.97);
-    -btn-shadow: rgba(0,10,40,0.40);
+    -input-bg: #fdfcfa;
+    -input-border: #d8d0c4;
+    -inset-shadow: rgba(70,55,40,0.14);
+    -btn-top: #fdfbf8;
+    -btn-bottom: #ece7e0;
+    -btn-hover-top: #ebe5dd;
+    -btn-hover-bottom: #ddd6cc;
+    -btn-border: #ddd5ca;
     /* table */
-    -table-bg: rgba(250,252,255,0.90);
-    -th-bg: rgba(19,181,142,0.12);
-    -row-alt: rgba(80,100,170,0.05);
-    -row-hover: rgba(19,181,142,0.14);
-    -row-selected: #5b3fc4;
-    -divider: rgba(60,80,140,0.14);
+    -table-bg: #fdfcfa;
+    -th-bg: #f0ebe4;
+    -row-hover: rgba(142,182,155,0.20);
+    -row-selected: #235347;
+    -sel-text: #daf1de;
+    -divider: #eee8df;
+    -chart-bar: #235347;
     /* pop-ups */
-    -popup-bg: #f5f8fd;
-    -popup-hover: #e2ebf8;
+    -popup-bg: #f6f3ee;
+    -popup-hover: #e9e3db;
+    -menu-selected: #235347;
+    -menu-selected-text: #daf1de;
     /* feedback */
-    -info-bg: rgba(255,255,255,0.88);
-    -err-bg: #fde8ee;
-    -err-text: #b0204a;
-    -ok-bg: #e3f8f0;
-    -ok-text: #0b7a5c;
-    -danger: #b0204a;
-    -danger-bg: rgba(176,32,74,0.10);
+    -info-bg: #efeae3;
+    -err-bg: #f7e1dc;
+    -err-text: #9c2f22;
+    -ok-bg: #daf1de;
+    -ok-text: #0b2b26;
+    -danger: #b0392b;
+    -danger-bg: rgba(176,57,43,0.10);
+    -badge-bg: #daf1de;
+    -badge-text: #0b2b26;
+    /* the sidebar: deep forest in both themes */
+    -rail-bg: linear-gradient(to bottom, #0b2b26, #051f20);
+    -rail-text: #daf1de;
+    -rail-muted: #8eb69b;
+    -rail-hover: rgba(218,241,222,0.07);
+    -rail-line: rgba(218,241,222,0.18);
+    -rail-selected: #163832;
 
     -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     -fx-font-size: 14px;
-    /* the animated aurora is drawn on top of this; the gradient shows only around dialogs */
-    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, -bg-1 0%, -bg-2 55%, -bg-3 100%);
+    -fx-background-color: -page-bg;
 }
 
 .root.dark {
-    -bg-1: #050a18;
-    -bg-2: #08122a;
-    -bg-3: #0d0a24;
-    /* smoked glass: dark and see-through, with only a faint sheen */
-    -glass-hi: rgba(12,22,44,0.84);
-    -glass-lo: rgba(6,12,28,0.72);
-    -glass-border: rgba(61,255,192,0.35);
-    -spec: rgba(120,255,210,0.07);
-    -caustic: rgba(160,110,255,0.14);
-    -gloss: rgba(255,255,255,0.07);
-    -gloss-soft: rgba(255,255,255,0.02);
-    -streak: rgba(255,255,255,0.03);
-    -edge: rgba(61,255,192,0.60);
-    -edge-2: rgba(160,110,255,0.60);
-    -rim: rgba(0,0,0,0.30);
-    -shadow: rgba(0,0,0,0.65);
-    -header-hi: rgba(8,16,34,0.93);
-    -header-lo: rgba(6,12,26,0.86);
-    -bar-bg: rgba(4,9,20,0.95);
-    -toolbar-bg: rgba(6,12,26,0.88);
-    /* mint words */
-    -text: #dff7ef;
-    -text-muted: #8fb3c4;
-    -title: #f2fffa;
-    -title-a: #7dffd0;
-    -title-b: #c4a6ff;
-    -accent: #3dffc0;
-    -primary-top: #12b886;
-    -primary-bottom: #6a3fe0;
-    -primary-hover-top: #1fd09a;
-    -primary-hover-bottom: #8057f5;
-    -primary-text: #ffffff;
-    -sel-text: #04121c;
-    -input-bg: rgba(4,10,24,0.78);
-    -input-focus: rgba(10,24,44,0.94);
-    -input-border: rgba(143,179,196,0.35);
-    -inset-shadow: rgba(0,0,0,0.60);
-    -btn-bg: rgba(16,28,52,0.82);
-    -btn-hover: rgba(26,48,78,0.94);
-    -btn-shadow: rgba(0,0,0,0.55);
-    -table-bg: rgba(6,12,28,0.82);
-    -th-bg: rgba(61,255,192,0.10);
-    -row-alt: rgba(255,255,255,0.03);
-    -row-hover: rgba(61,255,192,0.10);
-    -row-selected: #3dffc0;
-    -divider: rgba(143,179,196,0.16);
-    -popup-bg: #0b1426;
-    -popup-hover: #16253f;
-    -info-bg: rgba(10,20,40,0.88);
-    -err-bg: rgba(90,16,44,0.88);
-    -err-text: #ff8fb1;
-    -ok-bg: rgba(8,60,48,0.88);
-    -ok-text: #7dffd0;
-    -danger: #ff8fb1;
-    -danger-bg: rgba(255,79,140,0.14);
+    -page-bg: radial-gradient(center 18% 0%, radius 100%, #1d4a40 0%, #0b2b26 45%, #051f20 100%);
+    -surface: #0e2a25;
+    -surface-hi: #143630;
+    -card-edge: linear-gradient(to bottom, rgba(218,241,222,0.20), rgba(218,241,222,0.05));
+    -line: rgba(142,182,155,0.18);
+    -shadow: rgba(0,0,0,0.45);
+    -btn-shadow: rgba(0,0,0,0.50);
+    -text: #daf1de;
+    -text-muted: #8eb69b;
+    -title: #f1fbf3;
+    -title-a: #daf1de;
+    -title-b: #8eb69b;
+    -accent: #8eb69b;
+    -glow: #6fe3c6;
+    -input-bg: #082320;
+    -input-border: #2a5a4d;
+    -inset-shadow: rgba(0,0,0,0.50);
+    -btn-top: #1f483e;
+    -btn-bottom: #163832;
+    -btn-hover-top: #2a5d50;
+    -btn-hover-bottom: #235347;
+    -btn-border: rgba(142,182,155,0.24);
+    -table-bg: #0c2823;
+    -th-bg: #12332d;
+    -row-hover: rgba(142,182,155,0.10);
+    -row-selected: #8eb69b;
+    -sel-text: #051f20;
+    -divider: rgba(142,182,155,0.10);
+    -chart-bar: #8eb69b;
+    -popup-bg: #0b2b26;
+    -popup-hover: #163832;
+    -menu-selected: #8eb69b;
+    -menu-selected-text: #051f20;
+    -info-bg: #12332d;
+    -err-bg: rgba(156,47,34,0.40);
+    -err-text: #ffab9c;
+    -ok-bg: #235347;
+    -ok-text: #daf1de;
+    -danger: #ff9f8f;
+    -danger-bg: rgba(255,120,100,0.12);
+    -badge-bg: #235347;
+    -badge-text: #daf1de;
+    -rail-bg: #041a1b;
+    -rail-selected: #163832;
 }
 
 /* ---------- Text ---------- */
 .label { -fx-text-fill: -text; }
-.header { -fx-background-color: linear-gradient(to bottom, -header-hi, -header-lo);
-          -fx-border-color: transparent transparent linear-gradient(to right, -edge-2, -accent 50%, -edge-2) transparent;
-          -fx-border-width: 0 0 1.5 0;
-          -fx-padding: 14 28 14 28;
-          -fx-effect: dropshadow(gaussian, -shadow, 20, 0, 0, 6); }
-.app-title { -fx-font-family: "Georgia", "Palatino Linotype", serif; -fx-font-size: 26px; -fx-text-fill: linear-gradient(to right, -title-a, -title-b); }
-.card-title { -fx-font-family: "Georgia", "Palatino Linotype", serif; -fx-font-size: 18px; -fx-text-fill: -title; }
+.header { -fx-background-color: transparent; -fx-padding: 18 28 6 28; }
+.page-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: -title; }
+.app-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: linear-gradient(to right, -title-a, -title-b); }
+.card-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 17px; -fx-text-fill: -title; }
 .price-amount { -fx-font-weight: bold; -fx-text-fill: -title; }
 .hint { -fx-text-fill: -text-muted; -fx-font-size: 13px; }
 
-/* ---------- Light/dark switch: a frosted glass pill (same look in both themes) ---------- */
-.theme-toggle { -fx-cursor: hand; -fx-background-color: transparent; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.40), 14, 0.05, 0, 5); }
+/* ---------- Light/dark switch: a stone pill by day, a forest pill by night ---------- */
+.theme-toggle { -fx-cursor: hand; -fx-background-color: transparent; -fx-effect: dropshadow(gaussian, -btn-shadow, 10, 0, 0, 3); }
 .toggle-track {
     -fx-background-insets: 0, 1.5;
     -fx-background-radius: 20, 18.5;
@@ -156,199 +145,207 @@
 }
 .toggle-day {
     -fx-background-color:
-        linear-gradient(to bottom, rgba(255,255,255,0.92), rgba(205,205,205,0.60)),
+        linear-gradient(to bottom, #fbf9f6, #e3ddd5),
         linear-gradient(to bottom, rgba(255,255,255,0.85), transparent 55%);
 }
 .toggle-night {
     -fx-background-color:
-        linear-gradient(to bottom, rgba(6,12,30,0.95), rgba(40,22,90,0.85)),
-        linear-gradient(to bottom, rgba(125,255,208,0.30), transparent 55%);
+        linear-gradient(to bottom, #051f20, #235347),
+        linear-gradient(to bottom, rgba(218,241,222,0.25), transparent 55%);
 }
-.theme-toggle:focused .toggle-track { -fx-border-color: -accent; -fx-border-width: 2; }
+.theme-toggle:focused .toggle-track { -fx-border-color: -focus; -fx-border-width: 2; }
 .toggle-decoration { -fx-font-size: 13px; -fx-letter-spacing: 1; }
-.toggle-day .toggle-decoration { -fx-text-fill: rgba(0,0,0,0.55); }
-.toggle-night .toggle-decoration { -fx-text-fill: rgba(125,255,208,0.95); }
+.toggle-day .toggle-decoration { -fx-text-fill: rgba(5,31,32,0.40); }
+.toggle-night .toggle-decoration { -fx-text-fill: #daf1de; }
 .toggle-thumb {
     -fx-background-color:
-        linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(235,235,235,0.70)),
+        linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(235,232,226,0.80)),
         linear-gradient(to bottom, rgba(255,255,255,0.9), transparent 60%);
     -fx-background-insets: 0, 2;
     -fx-background-radius: 16, 14;
     -fx-border-color: rgba(255,255,255,0.9);
     -fx-border-radius: 16;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0.05, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 8, 0.05, 0, 3);
 }
 .toggle-icon { -fx-font-family: "Segoe UI Symbol", "Segoe UI Emoji", sans-serif; -fx-font-size: 18px; }
-.toggle-thumb .toggle-sun { -fx-text-fill: #000000; }
-.toggle-thumb .toggle-moon { -fx-text-fill: #5b3fc4; }
+.toggle-thumb .toggle-sun { -fx-text-fill: #ec7a45; }
+.toggle-thumb .toggle-moon { -fx-text-fill: #235347; }
 
-/* ---------- Cards: water glass (body, top sheen, pooled bottom-corner glow, rim light) ---------- */
+/* ---------- Cards: a soft panel raised off the page, lit along its top edge ---------- */
 .card {
-    -fx-background-color:
-        linear-gradient(from 0% 0% to 100% 100%, -glass-hi, -glass-lo),
-        linear-gradient(to bottom, -gloss 0%, -gloss-soft 44%, transparent 50%),
-        radial-gradient(center 16% 8%, radius 68%, -spec 0%, transparent 100%),
-        radial-gradient(center 90% 98%, radius 42%, -caustic 0%, transparent 100%),
-        linear-gradient(to top, -gloss-soft 0%, transparent 16%),
-        linear-gradient(from 0% 0% to 100% 100%, transparent 28%, -streak 36%, transparent 44%);
-    -fx-background-insets: 0, 2, 2, 2, 2, 2;
-    -fx-background-radius: 30, 28, 28, 28, 28, 28;
-    -fx-border-color: linear-gradient(from 0% 0% to 100% 100%, -edge 0%, transparent 38%, transparent 62%, -edge-2 100%);
-    -fx-border-width: 1.8;
-    -fx-border-radius: 30;
-    -fx-padding: 24;
-    -fx-effect: dropshadow(gaussian, -shadow, 44, 0.06, 0, 18);
+    -fx-background-color: linear-gradient(to bottom, -surface-hi, -surface);
+    -fx-background-radius: 22;
+    -fx-border-color: -card-edge;
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-padding: 20;
+    -fx-effect: dropshadow(gaussian, -shadow, 26, 0, 0, 10);
 }
 
-/* ---------- Inputs ---------- */
+/* ---------- Inputs: pills pressed slightly into the surface ---------- */
 .text-field, .combo-box-base, .text-area {
     -fx-background-color: -input-bg;
-    -fx-background-radius: 18;
+    -fx-background-radius: 999;
     -fx-border-color: -input-border;
-    -fx-border-radius: 18;
+    -fx-border-radius: 999;
     -fx-text-fill: -text;
     -fx-prompt-text-fill: -text-muted;
-    -fx-effect: innershadow(gaussian, -inset-shadow, 7, 0.05, 0, 2);
+    -fx-effect: innershadow(gaussian, -inset-shadow, 6, 0, 0, 2);
 }
-.text-field { -fx-padding: 10 16 10 16; -fx-font-size: 14px; }
-.combo-box-base { -fx-min-height: 40px; }
+.text-area { -fx-background-radius: 16; -fx-border-radius: 16; }
+.text-field { -fx-padding: 8 16 8 16; -fx-font-size: 14px; }
+.combo-box-base { -fx-min-height: 38px; -fx-padding: 0 6 0 6; }
 .combo-box-base .arrow { -fx-background-color: -accent; }
-.combo-box-base .list-cell { -fx-text-fill: -text; -fx-padding: 8 12 8 12; }
+.combo-box-base .list-cell { -fx-text-fill: -text; -fx-padding: 6 10 6 10; }
 .text-area .content { -fx-background-color: transparent; }
 .text-area .text { -fx-fill: -text; }
 .text-area .scroll-pane, .text-area .viewport { -fx-background-color: transparent; }
+/* Keyboard focus is the orange ring, everywhere */
 .text-field:focused, .combo-box-base:focused, .text-area:focused {
-    -fx-background-color: -input-focus;
-    -fx-border-color: -accent;
-    -fx-border-width: 1.5;
-    -fx-effect: dropshadow(gaussian, -accent, 10, 0.15, 0, 0);
+    -fx-border-color: -focus;
+    -fx-effect: dropshadow(gaussian, -primary-glow, 10, 0.3, 0, 0);
 }
 /* The input an error message is about (set by BillFormView); after :focused so it wins */
 .text-field:error, .combo-box-base:error, .text-area:error {
     -fx-border-color: -err-text;
-    -fx-border-width: 2;
-    -fx-effect: dropshadow(gaussian, -err-text, 8, 0.2, 0, 0);
+    -fx-effect: dropshadow(gaussian, -err-text, 6, 0.3, 0, 0);
 }
+/* A date picker is one pill: its inner text field and calendar button draw nothing of their own */
+.date-picker > .text-field, .date-picker > .text-field:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+}
+.date-picker > .arrow-button { -fx-background-color: transparent; }
 
-/* ---------- Buttons: glass pills with a sheen across the top ---------- */
+/* ---------- Buttons: raised pills ---------- */
 .button {
-    -fx-background-color:
-        -btn-bg,
-        linear-gradient(to bottom, -gloss 0%, -gloss-soft 48%, transparent 52%),
-        linear-gradient(to top, -gloss-soft 0%, transparent 28%);
-    -fx-background-insets: 0, 1.5, 1.5;
-    -fx-background-radius: 24, 22.5, 22.5;
-    -fx-border-color: linear-gradient(to bottom, -edge, -input-border);
-    -fx-border-width: 1.5;
-    -fx-border-radius: 24;
-    -fx-effect: dropshadow(gaussian, -btn-shadow, 16, 0.05, 0, 6);
-    -fx-padding: 11 28 11 28;
-    -fx-min-height: 46px;
-    -fx-min-width: 120px;
+    -fx-background-color: linear-gradient(to bottom, -btn-top, -btn-bottom);
+    -fx-background-radius: 999;
+    -fx-border-color: -btn-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 999;
+    -fx-padding: 8 20 8 20;
+    -fx-min-height: 38px;
+    -fx-font-family: "Segoe UI Semibold";
     -fx-font-size: 14px;
     -fx-text-fill: -title;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, -btn-shadow, 10, 0, 0, 3);
 }
-.button:hover {
-    -fx-background-color:
-        -btn-hover,
-        linear-gradient(to bottom, -gloss 0%, -gloss-soft 48%, transparent 52%),
-        linear-gradient(to top, -gloss-soft 0%, transparent 28%);
-    -fx-effect: dropshadow(gaussian, -btn-shadow, 20, 0.05, 0, 8);
-}
+.button:hover { -fx-background-color: linear-gradient(to bottom, -btn-hover-top, -btn-hover-bottom); }
+/* Pressed: the pill sinks into the page */
 .button:pressed {
-    -fx-background-color: -input-bg;
-    -fx-background-insets: 0;
-    -fx-effect: innershadow(gaussian, -inset-shadow, 8, 0.1, 0, 3);
+    -fx-background-color: -btn-bottom;
+    -fx-effect: innershadow(gaussian, -inset-shadow, 6, 0, 0, 2);
     -fx-translate-y: 1;
 }
-.button:focused { -fx-border-color: -accent; -fx-border-width: 2; }
+.button:focused { -fx-border-color: -focus; -fx-effect: dropshadow(gaussian, -primary-glow, 12, 0.3, 0, 0); }
+/* The main action of a screen: the orange pill */
 .button:default {
-    -fx-background-color:
-        linear-gradient(to right, -primary-top, -primary-bottom),
-        linear-gradient(to bottom, rgba(255,255,255,0.35) 0%, transparent 55%);
-    -fx-border-color: linear-gradient(to right, -edge, -edge-2);
-    -fx-effect: dropshadow(gaussian, -edge-2, 18, 0.10, 0, 4);
+    -fx-background-color: linear-gradient(to bottom, -primary-top, -primary-bottom);
+    -fx-border-color: transparent;
     -fx-text-fill: -primary-text;
+    -fx-font-family: "Segoe UI";
     -fx-font-weight: bold;
-    -fx-min-width: 150px;
+    -fx-effect: dropshadow(gaussian, -primary-glow, 14, 0, 0, 4);
 }
-.button:default:hover {
-    -fx-background-color:
-        linear-gradient(to right, -primary-hover-top, -primary-hover-bottom),
-        linear-gradient(to bottom, rgba(255,255,255,0.35) 0%, transparent 55%);
-}
+.button:default:hover { -fx-background-color: linear-gradient(to bottom, -primary-hover-top, -primary-hover-bottom); }
+.button:default:focused { -fx-border-color: -title; }
 .button.danger { -fx-text-fill: -danger; }
 .button.danger:hover { -fx-background-color: -danger-bg; -fx-border-color: -danger; }
+.button.compact { -fx-padding: 6 16 6 16; -fx-min-height: 34px; }
 
-/* ---------- Menu bar, toolbar, menus ---------- */
-.menu-bar { -fx-background-color: -bar-bg; -fx-border-color: -edge; -fx-border-width: 0 0 1 0; }
+/* ---------- Menu bar and menus ---------- */
+.menu-bar { -fx-background-color: transparent; -fx-padding: 2 8 0 8; }
 .menu-bar .label { -fx-text-fill: -text; }
+.menu-bar .menu-button { -fx-background-radius: 999; }
 .menu-bar .menu-button:hover, .menu-bar .menu:showing { -fx-background-color: -popup-hover; }
-.tool-bar {
-    -fx-background-color: -toolbar-bg;
-    -fx-border-color: -edge;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 10 20 10 20;
-    -fx-spacing: 10;
+.context-menu {
+    -fx-background-color: -popup-bg;
+    -fx-background-radius: 14;
+    -fx-border-color: -line;
+    -fx-border-radius: 14;
+    -fx-padding: 6;
+    -fx-effect: dropshadow(gaussian, -shadow, 18, 0, 0, 6);
 }
-.context-menu { -fx-background-color: -popup-bg; -fx-background-radius: 16; -fx-border-color: -glass-border; -fx-border-radius: 16; -fx-padding: 6; }
-.menu-item .label { -fx-text-fill: -text; -fx-padding: 4 8 4 8; }
-.menu-item:focused { -fx-background-color: -accent; }
-.menu-item:focused .label { -fx-text-fill: -sel-text; }
+.menu-item { -fx-background-radius: 999; -fx-padding: 6 12 6 12; }
+.menu-item .label { -fx-text-fill: -text; }
+.menu-item:focused { -fx-background-color: -menu-selected; }
+.menu-item:focused .label { -fx-text-fill: -menu-selected-text; }
 .menu-item .accelerator-text { -fx-text-fill: -text-muted; }
-.menu-item:focused .accelerator-text { -fx-text-fill: -sel-text; }
-.combo-box-popup > .list-view { -fx-background-color: -popup-bg; -fx-background-radius: 16; -fx-border-color: -glass-border; -fx-border-radius: 16; }
-.combo-box-popup .list-cell { -fx-background-color: -popup-bg; -fx-text-fill: -text; -fx-padding: 10 14 10 14; }
-.combo-box-popup .list-cell:hover, .combo-box-popup .list-cell:selected { -fx-background-color: -accent; -fx-text-fill: -sel-text; }
-
-/* ---------- Status message ---------- */
-.status {
-    -fx-padding: 12 22 12 22;
-    -fx-background-color: -info-bg, linear-gradient(to bottom, -gloss 0%, -gloss-soft 48%, transparent 52%);
-    -fx-background-insets: 0, 1.5;
-    -fx-background-radius: 24, 22.5;
-    -fx-border-radius: 24;
-    -fx-border-color: linear-gradient(from 0% 0% to 100% 100%, -edge 0%, transparent 50%, -edge 100%);
-    -fx-border-width: 1.5;
-    -fx-text-fill: -title;
-    -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, -shadow, 16, 0.05, 0, 5);
+.menu-item:focused .accelerator-text { -fx-text-fill: -menu-selected-text; }
+.combo-box-popup > .list-view {
+    -fx-background-color: -popup-bg;
+    -fx-background-radius: 14;
+    -fx-border-color: -line;
+    -fx-border-radius: 14;
+    -fx-padding: 4;
+    -fx-effect: dropshadow(gaussian, -shadow, 18, 0, 0, 6);
 }
-.status.error { -fx-background-color: -err-bg, linear-gradient(to bottom, -gloss 0%, -gloss-soft 48%, transparent 52%); -fx-text-fill: -err-text; -fx-border-color: -err-text; -fx-border-width: 2; }
-.status.success { -fx-background-color: -ok-bg, linear-gradient(to bottom, -gloss 0%, -gloss-soft 48%, transparent 52%); -fx-text-fill: -ok-text; }
+.combo-box-popup .list-cell { -fx-background-color: transparent; -fx-background-radius: 999; -fx-text-fill: -text; -fx-padding: 8 12 8 12; }
+.combo-box-popup .list-cell:hover, .combo-box-popup .list-cell:selected { -fx-background-color: -menu-selected; -fx-text-fill: -menu-selected-text; }
+
+/* ---------- Messages ---------- */
+/* An inline message box (sign-in and pop-up form errors) */
+.status {
+    -fx-padding: 8 14 8 14;
+    -fx-background-color: -info-bg;
+    -fx-background-radius: 14;
+    -fx-border-color: -line;
+    -fx-border-radius: 14;
+    -fx-text-fill: -title;
+}
+.status.error { -fx-background-color: -err-bg; -fx-border-color: -err-text; -fx-text-fill: -err-text; -fx-font-weight: bold; }
+.status.success { -fx-background-color: -ok-bg; -fx-border-color: -ok-bg; -fx-text-fill: -ok-text; }
+/* The main window's status line: a thin strip along the bottom, empty when there is nothing to say */
+.status.status-bar {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-border-color: -line transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 6 28 6 28;
+    -fx-min-height: 32px;
+    -fx-font-size: 13px;
+}
+.status.status-bar.error { -fx-background-color: -err-bg; }
+.status.status-bar.success { -fx-background-color: -ok-bg; }
 
 /* ---------- Table ---------- */
 .table-view {
     -fx-background-color: -table-bg;
-    -fx-border-color: linear-gradient(from 0% 0% to 100% 100%, -edge 0%, transparent 50%, -edge 100%);
-    -fx-border-width: 1.5;
-    -fx-background-radius: 22;
-    -fx-border-radius: 22;
+    -fx-border-color: -line;
+    -fx-border-width: 1;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
     -fx-padding: 2;
 }
 .table-view .placeholder .label { -fx-text-fill: -text-muted; }
-.table-view .column-header-background { -fx-background-color: -th-bg; -fx-background-radius: 20 20 0 0; }
+.table-view .column-header-background { -fx-background-color: -th-bg; -fx-background-radius: 14 14 0 0; }
 .table-view .column-header, .table-view .filler {
     -fx-background-color: transparent;
-    -fx-border-color: transparent -divider -edge-2 transparent;
-    -fx-border-width: 0 1 1 0;
-    -fx-size: 40;
+    -fx-border-color: transparent transparent -line transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-size: 38;
 }
-.table-view .column-header .label { -fx-font-weight: bold; -fx-text-fill: -title; }
+.table-view .column-header .label { -fx-font-family: "Segoe UI Semibold"; -fx-text-fill: -text-muted; -fx-font-size: 13px; }
+/* Rows are separated by a hairline; the empty rows that fill the rest of a table stay blank */
 .table-row-cell { -fx-cell-size: 40; -fx-background-color: transparent; -fx-border-color: transparent transparent -divider transparent; -fx-border-width: 0 0 1 0; }
-.table-row-cell:odd { -fx-background-color: -row-alt; }
+.table-row-cell:empty { -fx-border-color: transparent; }
 .table-row-cell:hover { -fx-background-color: -row-hover; }
+.table-row-cell:empty:hover { -fx-background-color: transparent; }
 .table-row-cell:selected { -fx-background-color: -row-selected; }
 .table-row-cell:selected .table-cell { -fx-text-fill: -sel-text; }
-.table-cell { -fx-alignment: CENTER-LEFT; -fx-padding: 0 12 0 12; -fx-text-fill: -text; -fx-border-color: transparent -divider transparent transparent; -fx-border-width: 0 1 0 0; }
+/* No vertical lines between columns: the gaps and alignment already separate them */
+.table-cell { -fx-alignment: CENTER-LEFT; -fx-padding: 0 12 0 12; -fx-text-fill: -text; -fx-border-color: transparent; }
 
 /* ---------- Pop-up windows (receipt, confirm, about) ---------- */
 .dialog-pane { -fx-background-color: -popup-bg; }
 .dialog-pane > .header-panel { -fx-background-color: -popup-hover; }
 .dialog-pane .label { -fx-text-fill: -text; }
 .dialog-pane > .button-bar > .container { -fx-background-color: -popup-bg; }
-.dialog-pane .button { -fx-min-width: 110px; }
+.dialog-pane .button { -fx-min-width: 96px; }
 
 /* ---------- Receipt: always white paper with dark ink, in both themes ---------- */
 .receipt-paper { -fx-background-color: #fffef8; }
@@ -372,127 +369,113 @@
 .receipt-paper .label.receipt-stamp-due { -fx-text-fill: #b03030; -fx-border-color: #b03030; }
 .main-scroll, .main-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
 .receipt-scroll, .receipt-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
+/* Thin pill scroll bars in the theme's colours (the built-in ones are bright grey, even in dark mode) */
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: -input-border; -fx-background-radius: 999; -fx-background-insets: 2; }
+.scroll-bar .thumb:hover { -fx-background-color: -text-muted; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-background-color: transparent; }
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-background-color: -text-muted; }
+.scroll-pane > .corner { -fx-background-color: transparent; }
 
-/* =====================================================================
-   Screens added with the database and front-desk work (sign-in/setup
-   cards, user badge, sidebar, dashboard, tape chart, rooms, folio).
-   They use the same palette names as above, plus a few of their own
-   defined here for both themes so they sit well on the aurora.
-   ===================================================================== */
-.root {
-    /* the sidebar is a strip of smoked glass over the aurora */
-    -rail-bg: rgba(8,18,42,0.72);
-    -rail-text: #e6f0ff;
-    -rail-muted: #9fb3d9;
-    -rail-hover: rgba(255,255,255,0.10);
-}
-.root.dark {
-    -rail-bg: rgba(3,8,20,0.78);
-    -rail-text: #d6fff1;
-    -rail-muted: #7f9cc0;
-    -rail-hover: rgba(120,255,210,0.10);
-}
-.app-subtitle { -fx-font-size: 13px; -fx-text-fill: -text-muted; }
-.app-stars { -fx-font-size: 13px; -fx-text-fill: -accent; -fx-letter-spacing: 2; }
-.button:default:focused { -fx-border-color: -accent; }
-.menu-item { -fx-background-radius: 6; }
-.bill-table { -fx-background-radius: 8; -fx-border-radius: 8; }
+/* ---------- Sign-in and first-run screens: the card floats over the night sky ---------- */
+.auth-card { -fx-spacing: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 40, 0, 0, 14); }
+.auth-card .app-title { -fx-font-size: 30px; }
+.auth-card .form-label { -fx-padding: 6 0 0 4; -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 13px; -fx-text-fill: -text-muted; }
 
-/* ---------- Sign-in and first-run screens ---------- */
-.auth-card { -fx-spacing: 10; }   /* keeps the frosted .card look; padding is set in code */
-.auth-card .app-title { -fx-font-size: 28px; }
-.auth-card .form-label { -fx-padding: 6 0 0 0; -fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: -text-muted; }
+/* ---------- Who is signed in ---------- */
 .user-badge { -fx-font-size: 13px; -fx-text-fill: -text-muted; }
 .user-badge-role {
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
-    -fx-background-color: -accent;
-    -fx-background-radius: 12;
+    -fx-text-fill: -badge-text;
+    -fx-background-color: -badge-bg;
+    -fx-background-radius: 999;
     -fx-padding: 3 12 3 12;
 }
-.root.dark .user-badge-role { -fx-text-fill: #04121f; }
 
 /* =====================================================================
    Front desk screens
    Semantic colours, the same in both themes so staff learn them once:
    green = available / paid, red = occupied / owing, amber = dirty / pending,
-   grey = maintenance / finished, violet = booked.
+   grey = maintenance / finished, blue = booked.
    ===================================================================== */
 .root {
-    -ok: #1f8a4c;      -ok-soft: #e2f4e9;
-    -busy: #cf3b33;    -busy-soft: #fde6e4;
-    -pending: #c27c0e; -pending-soft: #fdf0d6;
-    -idle: #5f6b70;    -idle-soft: #e9eef0;
-    -booked: #6a4fc9;  -booked-soft: #ece7fb;
+    -ok: #2f7d55;      -ok-soft: #dcefe2;
+    -busy: #b83c32;    -busy-soft: #f6e0dc;
+    -pending: #a8670f; -pending-soft: #f6e8cf;
+    -idle: #66706b;    -idle-soft: #e6e2dc;
+    -booked: #3e6595;  -booked-soft: #e0e8f3;
 }
 .root.dark {
-    -ok-soft: rgba(31,138,76,0.35);
-    -busy-soft: rgba(207,59,51,0.35);
-    -pending-soft: rgba(194,124,14,0.38);
-    -idle-soft: rgba(255,255,255,0.08);
-    -booked-soft: rgba(106,79,201,0.42);
+    -ok-soft: rgba(47,125,85,0.42);
+    -busy-soft: rgba(184,60,50,0.42);
+    -pending-soft: rgba(168,103,15,0.45);
+    -idle-soft: rgba(218,241,222,0.08);
+    -booked-soft: rgba(62,101,149,0.50);
 }
 
-/* ---------- Sidebar: smoked glass rail ---------- */
+/* ---------- Sidebar: the app's name, the two quick actions, then the pages ---------- */
 .sidebar {
     -fx-background-color: -rail-bg;
-    -fx-border-width: 0;
-    -fx-padding: 18 12 18 12;
-    -fx-pref-width: 220;
+    -fx-padding: 22 14 18 14;
+    -fx-pref-width: 214;
     -fx-min-width: 196;
 }
 .sidebar .label { -fx-text-fill: -rail-text; }
-.side-label { -fx-text-fill: -rail-muted; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 16 6 4 6; }
-.sidebar .side-label { -fx-text-fill: -rail-muted; }
+.sidebar .app-title { -fx-font-size: 21px; -fx-text-fill: -rail-text; -fx-padding: 0 8 14 8; }
 .nav-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 10;
-    -fx-border-width: 0;
+    -fx-background-radius: 999;
+    -fx-border-color: transparent;
+    -fx-border-radius: 999;
+    -fx-border-width: 1.5;
     -fx-alignment: CENTER-LEFT;
-    -fx-padding: 10 14 10 14;
+    -fx-padding: 9 16 9 16;
     -fx-text-fill: -rail-text;
     -fx-font-size: 14px;
     -fx-cursor: hand;
 }
 .nav-button:hover { -fx-background-color: -rail-hover; }
+/* The current page: a dark pill with a mint glow */
 .nav-button:selected {
-    -fx-background-color: -accent;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-}
-.root.dark .nav-button:selected { -fx-text-fill: #04121f; }
-.nav-button:focused { -fx-border-color: -rail-muted; -fx-border-width: 1; -fx-border-radius: 10; }
-.quick-action {
-    -fx-min-width: 0;
-    -fx-padding: 9 12 9 12;
-    -fx-min-height: 38px;
-    -fx-background-color: rgba(255,255,255,0.08);
-    -fx-border-color: rgba(255,255,255,0.18);
+    -fx-background-color: -rail-selected;
+    -fx-border-color: -glow;
     -fx-text-fill: -rail-text;
+    -fx-font-family: "Segoe UI Semibold";
+    -fx-effect: dropshadow(gaussian, -glow, 12, 0.2, 0, 0);
 }
-.quick-action:hover { -fx-background-color: rgba(255,255,255,0.14); -fx-border-color: -rail-text; }
-.quick-action:first-child {
+.nav-button:focused { -fx-border-color: -focus; }
+.quick-action {
+    -fx-padding: 8 14 8 14;
+    -fx-background-color: -rail-hover;
+    -fx-border-color: -rail-line;
+    -fx-text-fill: -rail-text;
+    -fx-effect: null;
+}
+.quick-action:hover { -fx-background-color: rgba(218,241,222,0.12); -fx-border-color: -rail-muted; }
+.quick-action.quick-primary {
     -fx-background-color: linear-gradient(to bottom, -primary-top, -primary-bottom);
     -fx-border-color: transparent;
     -fx-text-fill: -primary-text;
+    -fx-font-family: "Segoe UI";
     -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, -primary-glow, 14, 0, 0, 4);
 }
+.quick-action.quick-primary:hover { -fx-background-color: linear-gradient(to bottom, -primary-hover-top, -primary-hover-bottom); }
 
-/* ---------- Metric cards: coloured top strip ---------- */
-.metric { -fx-padding: 16 18 16 18; -fx-min-width: 150; }
-.metric-value { -fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: -title; }
+/* ---------- Metric tiles: a number and what it counts ---------- */
+.metric { -fx-padding: 16 20 16 20; -fx-min-width: 150; }
+.metric-value { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: -title; }
 .metric-caption { -fx-font-size: 12px; -fx-text-fill: -text-muted; }
-.metric-ok       { -fx-border-color: -ok -glass-border -glass-border -glass-border;      -fx-border-width: 4 1 1 1; }
-.metric-overdue  { -fx-border-color: -busy -glass-border -glass-border -glass-border;    -fx-border-width: 4 1 1 1; }
-.metric-occupied { -fx-border-color: -busy -glass-border -glass-border -glass-border;    -fx-border-width: 4 1 1 1; }
-.metric-pending  { -fx-border-color: -pending -glass-border -glass-border -glass-border; -fx-border-width: 4 1 1 1; }
+/* Only money owed to the lodge is worth colouring */
+.metric-overdue .metric-value { -fx-text-fill: -busy; }
+.root.dark .metric-overdue .metric-value { -fx-text-fill: #ff9a8a; }
 
 /* ---------- Status chips ---------- */
 .chip {
-    -fx-padding: 3 12 3 12;
-    -fx-background-radius: 12;
-    -fx-border-radius: 12;
+    -fx-padding: 2 10 2 10;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
     -fx-border-width: 0;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
@@ -509,88 +492,92 @@
 .root.dark .label.stay-cancelled, .root.dark .label.stay-booked { -fx-text-fill: white; }
 
 /* ---------- Tape chart ---------- */
-.tape { -fx-background-color: -table-bg; -fx-border-color: -glass-border; }
+.tape { -fx-background-color: -table-bg; -fx-border-color: -line; }
 .tape-head {
     -fx-background-color: -th-bg;
     -fx-text-fill: -text-muted;
-    -fx-font-weight: bold;
+    -fx-font-family: "Segoe UI Semibold";
     -fx-font-size: 12px;
     -fx-padding: 6 4 6 8;
-    -fx-border-color: transparent -divider -glass-border transparent;
+    -fx-border-color: transparent -divider -line transparent;
     -fx-border-width: 0 1 1 0;
 }
-.tape-head.tape-today { -fx-background-color: -accent; -fx-text-fill: white; }
+.tape-head.tape-today { -fx-background-color: linear-gradient(to bottom, -primary-top, -primary-bottom); -fx-text-fill: -primary-text; }
 .tape-room-cell {
-    -fx-padding: 6 8 6 8;
+    -fx-padding: 6 8 6 10;
     -fx-border-color: transparent -divider -divider transparent;
     -fx-border-width: 0 1 1 0;
     -fx-min-height: 52;
 }
-.tape-room { -fx-font-weight: bold; -fx-text-fill: -title; }
+.tape-room { -fx-font-family: "Segoe UI Semibold"; -fx-text-fill: -title; }
 .tape-cell {
     -fx-min-height: 52;
     -fx-border-color: transparent -divider -divider transparent;
     -fx-border-width: 0 1 1 0;
 }
-.tape-weekend { -fx-background-color: -row-alt; }
-.tape-cell.tape-today { -fx-background-color: rgba(19,181,142,0.10); }
-.root.dark .tape-cell.tape-today { -fx-background-color: rgba(120,255,210,0.10); }
+.tape-weekend { -fx-background-color: -th-bg; }
+.tape-cell.tape-today { -fx-background-color: rgba(236,122,69,0.08); }
 .tape-free { -fx-cursor: hand; }
 .tape-free:hover { -fx-background-color: -row-hover; }
 .tape-bar {
-    -fx-background-radius: 8;
-    -fx-border-radius: 8;
-    -fx-border-width: 0 0 0 4;
-    -fx-padding: 0 8 0 8;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-border-width: 0;
+    -fx-padding: 0 12 0 12;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
 }
 .tape-bar:hover { -fx-effect: dropshadow(gaussian, -btn-shadow, 8, 0, 0, 2); }
 
-/* ---------- Room tiles ---------- */
+/* ---------- Room tiles: a coloured strip down the left, raised like the panels ---------- */
+/* Three layers: the strip colour, a solid panel over all but the strip, then the tint
+   (the dark theme's tints are see-through, so they need the panel under them) */
 .room-tile {
-    -fx-background-radius: 14;
-    -fx-border-radius: 14;
-    -fx-border-width: 6 0 0 0;
-    -fx-padding: 14;
+    -fx-background-insets: 0, 0 0 0 6, 0 0 0 6;
+    -fx-background-radius: 18, 0 18 18 0, 0 18 18 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
+    -fx-border-radius: 18;
+    -fx-padding: 12 14 12 20;
     -fx-alignment: TOP-LEFT;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, -shadow, 14, 0, 0, 5);
 }
-.tile-available   { -fx-background-color: -ok-soft;      -fx-border-color: -ok; }
-.tile-occupied    { -fx-background-color: -busy-soft;    -fx-border-color: -busy; }
-.tile-dirty       { -fx-background-color: -pending-soft; -fx-border-color: -pending; }
-.tile-maintenance { -fx-background-color: -idle-soft;    -fx-border-color: -idle; }
-.room-tile:selected { -fx-effect: dropshadow(gaussian, -primary-top, 14, 0.45, 0, 0); }
-.room-tile:focused  { -fx-effect: dropshadow(gaussian, -primary-top, 8, 0.25, 0, 0); }
-.tile-number { -fx-font-family: "Segoe UI Semibold", "Segoe UI", sans-serif; -fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: -title; }
+.tile-available   { -fx-background-color: -ok, -surface, -ok-soft; }
+.tile-occupied    { -fx-background-color: -busy, -surface, -busy-soft; }
+.tile-dirty       { -fx-background-color: -pending, -surface, -pending-soft; }
+.tile-maintenance { -fx-background-color: -idle, -surface, -idle-soft; }
+/* The picked room glows mint, like the current page in the sidebar */
+.room-tile:selected { -fx-border-color: -glow; -fx-effect: dropshadow(gaussian, -glow, 16, 0.25, 0, 0); }
+.room-tile:focused  { -fx-border-color: -focus; }
+.tile-number { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: -title; }
 .tile-type { -fx-font-size: 12px; -fx-text-fill: -text-muted; }
 
 /* ---------- Folio ---------- */
-.folio-guest { -fx-font-family: "Segoe UI Semibold", "Segoe UI", sans-serif; -fx-font-size: 22px; -fx-text-fill: -title; }
+.folio-guest { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 24px; -fx-text-fill: -title; }
 .sticky-footer {
-    -fx-background-color: -bar-bg;
-    -fx-border-color: -glass-border transparent transparent transparent;
+    -fx-background-color: -surface;
+    -fx-border-color: -line transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
-    -fx-padding: 12 20 12 20;
-    -fx-effect: dropshadow(gaussian, -shadow, 12, 0, 0, -2);
+    -fx-padding: 14 22 14 22;
 }
-.balance-due { -fx-font-size: 22px; -fx-font-weight: bold; }
+.balance-due { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 24px; }
 .balance-due.owing { -fx-text-fill: -busy; }
 .balance-due.settled { -fx-text-fill: -ok; }
-.root.dark .balance-due.owing { -fx-text-fill: #ff9a90; }
-.root.dark .balance-due.settled { -fx-text-fill: #9ff0bf; }
+.root.dark .balance-due.owing { -fx-text-fill: #ff9a8a; }
+.root.dark .balance-due.settled { -fx-text-fill: #9fe0b8; }
 .table-row-cell.voided .table-cell { -fx-strikethrough: true; -fx-text-fill: -text-muted; -fx-opacity: 0.7; }
 .split-grid { -fx-padding: 10 0 0 0; }
 .chart { -fx-padding: 4; }
-.chart-bar { -fx-bar-fill: linear-gradient(to bottom, -primary-top, -primary-bottom); -fx-background-radius: 6 6 0 0; }
-.chart-title, .axis-label, .axis .tick-mark, .axis { -fx-text-fill: -text; -fx-tick-label-fill: -text; }
-.button.compact { -fx-min-width: 0; -fx-padding: 9 16 9 16; -fx-min-height: 40px; }
-.metric-value { -fx-font-size: 22px; }
+.chart-plot-background { -fx-background-color: transparent; }
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines { -fx-stroke: -divider; }
+.chart-bar { -fx-bar-fill: -chart-bar; -fx-background-radius: 10 10 0 0; }
+.axis { -fx-tick-label-fill: -text-muted; }
+.axis-label { -fx-text-fill: -text-muted; }
 
-/* The frosted layer under each page of the main window */
-.page-area { -fx-background-color: rgba(240,246,255,0.55); }
-.root.dark .page-area { -fx-background-color: rgba(4,10,26,0.50); }
+/* The page behind the panels of the main window: the root's lit stone (or forest) shows through */
+.page-area { -fx-background-color: transparent; }
 
 /* The one-time password shown to an admin: big and monospaced, so 4 and 9 are easy to tell apart */
 .temp-password { -fx-font-family: "Consolas", "Menlo", monospace; -fx-font-size: 18px; -fx-font-weight: bold; }

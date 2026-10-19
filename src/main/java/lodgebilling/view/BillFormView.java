@@ -42,6 +42,7 @@ public class BillFormView extends VBox {
     private final TextArea notesArea = new TextArea();
     private final Button calculateButton = new Button("_Calculate");
     private final Button saveButton = new Button("_Save receipt");
+    private final Button newGuestButton = new Button("New guest");
 
     public BillFormView(BillingActions actions, ObjectProperty<StatusMessage> status) {
         super(12);
@@ -52,6 +53,7 @@ public class BillFormView extends VBox {
         calculateButton.setOnAction(e -> actions.calculate());
         saveButton.setDefaultButton(true);         // Enter triggers Save receipt
         saveButton.setOnAction(e -> actions.saveBill());
+        newGuestButton.setOnAction(e -> actions.newGuest());   // clears the form
 
         // Tell the controller about every edit, so it can drop an error the user is fixing
         for (FormField field : FormField.values()) {
@@ -164,7 +166,9 @@ public class BillFormView extends VBox {
         addRow(form, 2, 0, 1, "_Extras in K", extrasField);
         addRow(form, 2, 2, 1, "_Amount paid in K", paidField);
         addRow(form, 3, 0, 3, "N_otes", notesArea);
-        form.add(new HBox(10, calculateButton, saveButton), 1, 4, 3, 1);
+        HBox buttons = new HBox(10, calculateButton, saveButton, Ui.spacer(), newGuestButton);
+        buttons.setMaxWidth(Double.MAX_VALUE);
+        form.add(buttons, 1, 4, 3, 1);
 
         ColumnConstraints labelCol = new ColumnConstraints(90);
         ColumnConstraints inputCol = new ColumnConstraints();

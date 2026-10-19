@@ -10,7 +10,6 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lodgebilling.model.User;
 import lodgebilling.security.Role;
@@ -41,10 +40,9 @@ public class StaffPage implements Page {
     private final PageContext ctx;
     private final AuthService auth;
     private final TableView<User> table = new TableView<>();
-    private final Label counts = new Label();
-    private final Button reset = Ui.button("Reset password", () -> withSelected(this::resetPassword));
-    private final Button toggle = Ui.button("Disable", () -> withSelected(this::toggleActive));
-    private final Button role = Ui.button("Change role", () -> withSelected(this::changeRole));
+    private final Button reset = Ui.compact("Reset password", () -> withSelected(this::resetPassword));
+    private final Button toggle = Ui.compact("Disable", () -> withSelected(this::toggleActive));
+    private final Button role = Ui.compact("Change role", () -> withSelected(this::changeRole));
     private final VBox root;
 
     public StaffPage(PageContext ctx) {
@@ -52,7 +50,7 @@ public class StaffPage implements Page {
         this.auth = ctx.auth();
         buildTable();
 
-        Button add = Ui.button("+ Add staff member", this::addUser);
+        Button add = Ui.compact("Add staff member", this::addUser);
         toggle.getStyleClass().add("danger");
         HBox actions = Ui.row(add, Ui.spacer(), reset, role, toggle);
 
@@ -60,20 +58,9 @@ public class StaffPage implements Page {
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, now) -> updateButtons(now));
         updateButtons(null);
 
-        Label hint = new Label("Staff cannot sign themselves up. Add them here and give them the one-time "
-                + "password the app shows you; they choose their own password the first time they sign in.");
-        Label roles = new Label(ROLES_EXPLAINED);
-        for (Label l : List.of(hint, roles)) {
-            l.getStyleClass().add("hint");
-            l.setWrapText(true);
-            l.setMinHeight(Region.USE_PREF_SIZE);   // wrap onto a second line instead of cutting off with "..."
-        }
-
-        counts.getStyleClass().add("hint");
-        VBox card = Ui.card("Staff accounts", hint, counts, table, roles);
+        // How accounts work and what each role may do is explained in the Add and Change role forms
         VBox.setVgrow(table, Priority.ALWAYS);
-        VBox.setVgrow(card, Priority.ALWAYS);
-        root = new VBox(12, actions, card);
+        root = new VBox(12, actions, table);
         root.setPadding(new Insets(16, 20, 16, 20));
     }
 
@@ -105,10 +92,6 @@ public class StaffPage implements Page {
         ctx.attempt(() -> {
             List<User> users = auth.listUsers(ctx.session());
             table.setItems(FXCollections.observableArrayList(users));
-            long active = users.stream().filter(User::active).count();
-            long waiting = users.stream().filter(u -> u.active() && u.mustChangePassword()).count();
-            counts.setText(users.size() + " accounts, " + active + " active"
-                    + (waiting > 0 ? ", " + waiting + " still to set their own password" : "") + ".");
             if (selected != null) {
                 users.stream().filter(u -> u.id() == selected.id()).findFirst()
                         .ifPresent(u -> table.getSelectionModel().select(u));

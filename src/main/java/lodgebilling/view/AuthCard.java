@@ -34,17 +34,23 @@ public abstract class AuthCard extends StackPane {
     private final ChangeListener<Theme> themeListener = (obs, old, now) -> Styles.apply(now, this);
     private TextField firstInput;
 
+    /** The heading and the line under it are optional (null leaves them out). */
     AuthCard(String heading, String subheading, ObjectProperty<Theme> theme) {
         this.theme = theme;
-        Label stars = new Label("★★★★★");
-        stars.getStyleClass().add("app-stars");
         Label title = new Label("Lodge Billing");
         title.getStyleClass().add("app-title");
-        Label head = new Label(heading);
-        head.getStyleClass().add("card-title");
-        Label sub = new Label(subheading);
-        sub.getStyleClass().add("hint");
-        sub.setWrapText(true);
+        card.getChildren().add(title);
+        if (heading != null) {
+            Label head = new Label(heading);
+            head.getStyleClass().add("card-title");
+            card.getChildren().add(head);
+        }
+        if (subheading != null) {
+            Label sub = new Label(subheading);
+            sub.getStyleClass().add("hint");
+            sub.setWrapText(true);
+            card.getChildren().add(sub);
+        }
 
         error.getStyleClass().addAll("status", "error");
         error.setWrapText(true);
@@ -52,7 +58,6 @@ public abstract class AuthCard extends StackPane {
         error.managedProperty().bind(error.visibleProperty());
         error.setVisible(false);
 
-        card.getChildren().addAll(stars, title, head, sub);
         card.getStyleClass().addAll("card", "auth-card");
         card.setPadding(new Insets(28));
         card.setMaxWidth(440);
