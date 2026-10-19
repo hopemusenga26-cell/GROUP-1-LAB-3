@@ -53,7 +53,7 @@ public class BillingController implements BillingActions {
         this.auth = auth;
         this.audit = audit;
         this.onLogout = onLogout;
-        this.view = new MainView(model, this, stage, lodge, audit);
+        this.view = new MainView(model, this, stage, lodge, audit, auth);
     }
 
     public MainView view() {
@@ -219,7 +219,7 @@ public class BillingController implements BillingActions {
             model.setStatus(StatusMessage.error("Only an admin can manage users."));
             return;
         }
-        view.manageUsers(auth);
+        view.manageUsers();
     }
 
     @Override

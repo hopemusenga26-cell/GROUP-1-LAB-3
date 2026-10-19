@@ -12,6 +12,7 @@ import lodgebilling.model.Theme;
 import lodgebilling.security.AccessDeniedException;
 import lodgebilling.security.Permission;
 import lodgebilling.security.Session;
+import lodgebilling.service.AuthService;
 import lodgebilling.service.BalanceDueException;
 import lodgebilling.service.LodgeService;
 import lodgebilling.service.UserFacingException;
@@ -39,18 +40,21 @@ public class PageContext {
     private final BillingModel model;
     private final LodgeService lodge;
     private final AuditLog audit;
+    private final AuthService auth;
     private Runnable refreshCurrentPage = () -> { };
 
-    public PageContext(Stage owner, BillingModel model, LodgeService lodge, AuditLog audit) {
+    public PageContext(Stage owner, BillingModel model, LodgeService lodge, AuditLog audit, AuthService auth) {
         this.owner = owner;
         this.model = model;
         this.lodge = lodge;
         this.audit = audit;
+        this.auth = auth;
     }
 
     public Stage owner()          { return owner; }
     public LodgeService lodge()   { return lodge; }
     public AuditLog audit()       { return audit; }
+    public AuthService auth()     { return auth; }
     public Session session()      { return model.session(); }
     public Theme theme()          { return model.themeProperty().get(); }
     public boolean can(Permission p) { return model.session().has(p); }

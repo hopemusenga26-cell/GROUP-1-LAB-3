@@ -110,7 +110,7 @@ public class AuthService {
                 throw new AuthException("This account has been disabled. Ask an admin.");
             }
 
-            users.recordSuccessfulLogin(user.id());
+            users.recordSuccessfulLogin(user.id(), now);
             audit.record(user.username(), Action.LOGIN, "");
             return user;
         } finally {

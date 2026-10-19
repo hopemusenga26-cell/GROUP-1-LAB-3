@@ -20,12 +20,12 @@ import lodgebilling.security.PasswordHasher;
  * It is never stored in plain text and cannot be looked up again: if it is lost,
  * the admin simply resets the password once more.
  */
-final class TemporaryPasswordDialog {
+public final class TemporaryPasswordDialog {
 
     private TemporaryPasswordDialog() { }
 
     /** Shows the password, then wipes the array it was given. */
-    static void show(Window owner, Theme theme, String header, String username, char[] password) {
+    public static void show(Window owner, Theme theme, String header, String username, char[] password) {
         try {
             TextField shown = new TextField(new String(password));
             shown.setEditable(false);   // selectable, but not editable

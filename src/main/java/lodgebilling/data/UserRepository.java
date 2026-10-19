@@ -23,7 +23,8 @@ public class UserRepository {
     public record Credentials(User user, String passwordHash, int failedAttempts, Instant lockedUntil) { }
 
     private static final String COLUMNS =
-            "id, username, full_name, role, active, must_change_password, password_hash, failed_attempts, locked_until";
+            "id, username, full_name, role, active, must_change_password, password_hash, failed_attempts, locked_until, "
+            + "last_login_at";
 
     private final Connection db;
 
@@ -121,8 +122,9 @@ public class UserRepository {
                 failedAttempts, lockedUntil == null ? null : lockedUntil.toString(), userId);
     }
 
-    public void recordSuccessfulLogin(long userId) {
-        update("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?", userId);
+    public void recordSuccessfulLogin(long userId, Instant at) {
+        update("UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?",
+                at.toString(), userId);
     }
 
     public void updatePassword(long userId, String passwordHash, boolean mustChangePassword) {
@@ -151,8 +153,9 @@ public class UserRepository {
     }
 
     private static User mapUser(ResultSet rs) throws SQLException {
+        String lastLogin = rs.getString("last_login_at");
         return new User(rs.getLong("id"), rs.getString("username"), rs.getString("full_name"),
                 Role.valueOf(rs.getString("role")), rs.getInt("active") == 1,
-                rs.getInt("must_change_password") == 1);
+                rs.getInt("must_change_password") == 1, lastLogin == null ? null : Instant.parse(lastLogin));
     }
 }

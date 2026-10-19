@@ -187,4 +187,17 @@ class AuthServiceTest {
         assertThrows(AccessDeniedException.class, () -> auth.createUser(desk, "x_user", "X User", Role.STAFF));
         assertThrows(AccessDeniedException.class, () -> auth.resetPassword(desk, staff.id()));
     }
+
+    @Test
+    void theStaffListShowsWhenEachPersonLastSignedIn() throws AuthException {
+        auth.createUser(admin, "mary", "Mary Banda", Role.STAFF, pw("temp1234"));
+        User before = auth.listUsers(admin).stream().filter(u -> u.username().equals("mary")).findFirst().orElseThrow();
+        assertEquals(null, before.lastLogin());   // never signed in yet
+
+        clock.advance(Duration.ofHours(2));
+        auth.login("mary", pw("temp1234"));
+        User after = auth.listUsers(admin).stream().filter(u -> u.username().equals("mary")).findFirst().orElseThrow();
+        assertEquals(clock.instant(), after.lastLogin());
+        assertEquals("Must set own password", after.getStatus());
+    }
 }
