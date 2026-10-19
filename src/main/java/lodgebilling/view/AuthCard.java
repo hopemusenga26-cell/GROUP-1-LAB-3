@@ -88,6 +88,15 @@ public abstract class AuthCard extends StackPane {
         card.getChildren().addAll(error, main);
     }
 
+    /** A line of small print under the main button. */
+    protected void footnote(String text) {
+        Label note = new Label(text);
+        note.getStyleClass().add("hint");
+        note.setWrapText(true);
+        note.setMaxWidth(Double.MAX_VALUE);
+        card.getChildren().add(note);
+    }
+
     public void showError(String message) {
         error.setText(message);
         error.setVisible(true);

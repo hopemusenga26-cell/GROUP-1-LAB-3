@@ -30,6 +30,9 @@ public class LoginView extends AuthCard {
             handler.signIn(username.getText(), typed);
         });
         finish(signIn);
+        // There is no sign-up on purpose: only an admin creates accounts and chooses their role
+        footnote("No account? Ask your manager to create one for you. "
+                + "Forgot your password? An admin can reset it.");
     }
 
     @Override
