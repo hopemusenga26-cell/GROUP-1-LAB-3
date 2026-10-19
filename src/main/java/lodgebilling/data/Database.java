@@ -176,9 +176,12 @@ public final class Database implements AutoCloseable {
         return new Database("jdbc:sqlite::memory:");
     }
 
-    /** ~/.lodgebilling/lodgebilling.db, outside the project so it never ends up in Git. */
+    /**
+     * data/lodgebilling.db in the folder the app is started from (the project folder
+     * under gradlew run and IntelliJ). data/ is in .gitignore so it never ends up in Git.
+     */
     public static Path defaultPath() {
-        return Path.of(System.getProperty("user.home"), ".lodgebilling", "lodgebilling.db");
+        return Path.of("data", "lodgebilling.db");
     }
 
     /**

@@ -86,11 +86,13 @@ The Staff page also shows who still has to do that, and when each person last si
 
 ## Where the data is kept
 
-Everything is stored in `lodgebilling.db` in a `.lodgebilling` folder in your home folder
-(for example `C:\Users\<you>\.lodgebilling\lodgebilling.db`). It is outside the project on purpose,
-so guest details are never committed to Git.
+Everything is stored in a SQLite database, `data/lodgebilling.db`, inside the project folder. It is
+created on the first start. The `data/` folder is listed in `.gitignore`, so guest details are never
+committed to Git. Start the app from the project folder (`gradlew run` and IntelliJ both do), or it
+will create a new, empty database wherever it was started.
 
-Receipts saved by the earlier version of the app (`receipts.tsv` in the same folder) are copied into
+Receipts saved by the earlier version of the app (`receipts.tsv` in a `.lodgebilling` folder in your
+home folder, for example `C:\Users\<you>\.lodgebilling\receipts.tsv`) are copied into
 the database automatically on the first start, keeping their receipt numbers. The old file is then
 renamed to `receipts.tsv.imported`.
 
