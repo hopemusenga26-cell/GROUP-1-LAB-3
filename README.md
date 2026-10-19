@@ -130,3 +130,19 @@ src/test/java/lodgebilling/   JUnit tests
 ```
 
 ## Team
+
+1.  Musenga Hope Sichula
+2.  Yande Sichula
+3.  Charles Junior Makwembo
+4.  Muonga Kafuti
+5.  Kasamba Faith Masinja
+6.  Mulenga Mwamba
+7.  Nyangu Chimwemwe Mubanga
+8.  Namuungo Agness Mulungu
+9.  Nikiwe Taonga Mwale
+10.  Ugolisa Isaac Urobo
+11.  Bumi Lukomona
+12.  Siame Ndinawe
+13.  Samuel Siame
+ 
+
