@@ -119,11 +119,14 @@ public class UserManagementDialog {
         TextField fullName = form.add("Full name", new TextField());
         TextField username = form.add("Username", new TextField());
         ComboBox<Role> role = form.add("Role", new ComboBox<>(FXCollections.observableArrayList(Role.values())));
-        role.setValue(Role.STAFF);
+        role.setValue(Role.STAFF);   // the most common hire; Admin is never the default
+        form.addNote(ROLES_EXPLAINED);
         form.addNote("The app makes a one-time password for them. They choose their own at first sign-in.");
         AuthService.IssuedAccount[] issued = new AuthService.IssuedAccount[1];
-        form.onSubmit(() -> issued[0] = auth.createUser(session, username.getText(), fullName.getText(),
-                role.getValue()));
+        form.onSubmit(() -> {
+            confirmAdmin(fullName.getText().isBlank() ? username.getText() : fullName.getText(), role.getValue());
+            issued[0] = auth.createUser(session, username.getText(), fullName.getText(), role.getValue());
+        });
         if (form.showAndWait()) {
             User created = issued[0].user();
             showStatus("Created " + created.username() + " (" + created.role().getLabel() + ").", false);
@@ -165,14 +168,36 @@ public class UserManagementDialog {
                 "Change role", "Cancel");
         ComboBox<Role> role = form.add("Role", new ComboBox<>(FXCollections.observableArrayList(Role.values())));
         role.setValue(user.role());
-        form.addNote("Housekeeping: room status only. Front desk: bookings, folios, receipts. "
-                + "Admin: everything.");
+        form.addNote(ROLES_EXPLAINED);
         form.onSubmit(() -> {
+            if (user.role() != Role.ADMIN) {
+                confirmAdmin(user.fullName(), role.getValue());
+            }
             auth.setRole(session, user.id(), role.getValue());
             showStatus(user.username() + " is now " + role.getValue() + ".", false);
         });
         if (form.showAndWait()) {
             refresh();
+        }
+    }
+
+    private static final String ROLES_EXPLAINED = "Housekeeping: room status only. "
+            + "Front desk: bookings, check-in/out, folios and receipts. "
+            + "Admin: everything, including prices, voids, reports and staff accounts.";
+
+    /**
+     * Giving someone Admin hands over the whole lodge, so it takes a second, deliberate
+     * click instead of one slip in a dropdown. Cancelling keeps the form open.
+     */
+    private void confirmAdmin(String who, Role chosen) throws AuthException {
+        if (chosen != Role.ADMIN) {
+            return;
+        }
+        String name = who == null || who.isBlank() ? "this person" : who.trim();
+        if (!confirm("Make " + name + " an Admin? Admins can change prices and VAT, void charges, force "
+                + "check-outs, see every report, and create, reset or disable any staff account, "
+                + "including yours. For reception work choose Front desk instead.")) {
+            throw new AuthException("Not saved. Choose another role, or confirm to give Admin access.");
         }
     }
 
