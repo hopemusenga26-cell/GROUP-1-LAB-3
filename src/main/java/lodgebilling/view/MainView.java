@@ -35,6 +35,7 @@ import lodgebilling.view.pages.StaffPage;
 import lodgebilling.view.pages.StaysPage;
 import lodgebilling.view.pages.TapeChartPage;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -46,6 +47,8 @@ import java.util.Map;
  * billing screen; the other pages live in view.pages.
  */
 public class MainView extends BorderPane {
+
+    private static final DateTimeFormatter SIDEBAR_DATE = DateTimeFormatter.ofPattern("EEEE d MMMM");
 
     private final BillFormView form;
     private final BillTableView table;
@@ -94,10 +97,13 @@ public class MainView extends BorderPane {
         setLeft(buildSidebar(visible));
         setBottom(new StatusBar(model.statusProperty()));
 
-        // The header names the page, so it sits over the page rather than across the sidebar
+        // The header names the page, so it sits over the page rather than across the sidebar.
+        // Header and page together are the sheet of paper the current sidebar tab joins.
         pageArea.getStyleClass().add("page-area");
         VBox.setVgrow(pageArea, Priority.ALWAYS);
-        setCenter(new VBox(header, pageArea));
+        VBox sheet = new VBox(header, pageArea);
+        sheet.getStyleClass().add("sheet");
+        setCenter(sheet);
         if (!visible.isEmpty()) {
             showPage(visible.get(0));
         }
@@ -123,11 +129,14 @@ public class MainView extends BorderPane {
     }
 
     private VBox buildSidebar(List<AppPage> visible) {
-        VBox side = new VBox(6);
+        VBox side = new VBox(4);
         side.getStyleClass().add("sidebar");
         Label name = new Label("Lodge Billing");
         name.getStyleClass().add("app-title");
-        side.getChildren().add(name);
+        // The lodge's working date, which the arrivals, departures and tape chart all go by
+        Label today = new Label(pageContext.lodge().today().format(SIDEBAR_DATE));
+        today.getStyleClass().add("sidebar-date");
+        side.getChildren().addAll(name, today);
         if (pageContext.can(Permission.MANAGE_RESERVATIONS)) {
             // Quick actions, reachable from every page (the pages do not repeat them)
             Button book = Ui.button("New booking", () -> quickBook(ReservationDialog.Mode.BOOK));
@@ -136,7 +145,9 @@ public class MainView extends BorderPane {
             walkIn.getStyleClass().add("quick-action");
             book.setMaxWidth(Double.MAX_VALUE);
             walkIn.setMaxWidth(Double.MAX_VALUE);
-            VBox.setMargin(walkIn, new Insets(0, 0, 14, 0));   // a gap before the pages
+            // The sidebar has no right padding (the page tabs run into the sheet), so the buttons keep their own
+            VBox.setMargin(book, new Insets(0, 14, 2, 0));
+            VBox.setMargin(walkIn, new Insets(0, 14, 18, 0));   // a gap before the pages
             side.getChildren().addAll(book, walkIn);
         }
         for (int i = 0; i < visible.size(); i++) {

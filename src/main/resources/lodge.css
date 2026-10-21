@@ -1,356 +1,312 @@
 /* =====================================================================
-   Colour palettes. Everything below uses these names, so a theme is just
-   a different set of values. ".dark" is added to the root by the app.
-   Soft, tactile surfaces: rounded panels and pill buttons that sit up off
-   the page with a gentle shadow, lit from the top-left.
-   The forest greens #051F20 #0B2B26 #163832 #235347 #8EB69B #DAF1DE carry
-   the app (sidebar, ink, selection). One warm orange marks the main action
-   and keyboard focus; a mint glow marks what is selected.
-   Light: a warm stone page with forest ink. Dark: the forest greens themselves.
+   The front-desk register.
+   The window is a desk (cool stone) with one open sheet of paper on it: the
+   page you are working on. Sections are ruled off like a ledger instead of
+   boxed into floating cards. Ink marks anything you can act on; colour is kept
+   for room and stay status only, so it always means something.
+   Two typefaces: Segoe UI for the interface, and Bahnschrift (the DIN face of
+   door plates and key tags) for room numbers, money and dates. JavaFX takes one
+   family name per rule (no fallback lists); Styles loads Bahnschrift.
+   ".dark" is added to the root by the app.
    ===================================================================== */
 .root {
-    /* the page, lit from the top-left */
-    -page-bg: radial-gradient(center 18% 0%, radius 100%, #f8f5f0 0%, #e9e4dc 55%, #ddd6cc 100%);
-    -surface: #f4f0ea;
-    -surface-hi: #fbf9f6;
-    -card-edge: linear-gradient(to bottom, rgba(255,255,255,0.95), #e0d9cf);
-    -line: #e0d9cf;
-    -shadow: rgba(70,55,40,0.16);
-    -btn-shadow: rgba(70,55,40,0.22);
-    /* text */
-    -text: #163832;
-    -text-muted: #5e6f67;
-    -title: #051f20;
-    -title-a: #0b2b26;                       /* the sign-in title runs from forest... */
-    -title-b: #2f6b5b;                       /* ...to a lighter green */
-    -accent: #235347;
-    -glow: #4fc9a4;                          /* the mint glow round whatever is selected */
-    /* the main action: a warm orange pill with dark ink (white on this orange is too faint) */
-    -primary-top: #f6a066;
-    -primary-bottom: #ec7a45;
-    -primary-hover-top: #f8b07e;
-    -primary-hover-bottom: #f08a55;
-    -primary-text: #051f20;
-    -primary-glow: rgba(236,122,69,0.45);
-    -focus: #ec7a45;
-    /* inputs and buttons */
-    -input-bg: #fdfcfa;
-    -input-border: #d8d0c4;
-    -inset-shadow: rgba(70,55,40,0.14);
-    -btn-top: #fdfbf8;
-    -btn-bottom: #ece7e0;
-    -btn-hover-top: #ebe5dd;
-    -btn-hover-bottom: #ddd6cc;
-    -btn-border: #ddd5ca;
-    /* table */
-    -table-bg: #fdfcfa;
-    -th-bg: #f0ebe4;
-    -row-hover: rgba(142,182,155,0.20);
-    -row-selected: #235347;
-    -sel-text: #daf1de;
-    -divider: #eee8df;
-    -chart-bar: #235347;
-    /* pop-ups */
-    -popup-bg: #f6f3ee;
-    -popup-hover: #e9e3db;
-    -menu-selected: #235347;
-    -menu-selected-text: #daf1de;
-    /* feedback */
-    -info-bg: #efeae3;
-    -err-bg: #f7e1dc;
-    -err-text: #9c2f22;
-    -ok-bg: #daf1de;
-    -ok-text: #0b2b26;
-    -danger: #b0392b;
-    -danger-bg: rgba(176,57,43,0.10);
-    -badge-bg: #daf1de;
-    -badge-text: #0b2b26;
-    /* the sidebar: deep forest in both themes */
-    -rail-bg: linear-gradient(to bottom, #0b2b26, #051f20);
-    -rail-text: #daf1de;
-    -rail-muted: #8eb69b;
-    -rail-hover: rgba(218,241,222,0.07);
-    -rail-line: rgba(218,241,222,0.18);
-    -rail-selected: #163832;
+    -desk: #e8ebe6;          /* the window behind the sheet: sidebar, menu, status line */
+    -paper: #ffffff;         /* the working sheet */
+    -paper-soft: #f5f6f3;    /* weekends, table headers, read-only areas */
+    -text: #16202b;          /* register ink */
+    -text-muted: #5a6470;    /* pencil */
+    -title: #16202b;
+    -line: #d6dbd3;          /* rules between sections and rows */
+    -line-soft: #eceeea;
+    -line-strong: #c3c9c0;   /* edges of inputs and buttons */
+    -hover: #f2f4f1;
+    -row-selected: #e1e7ef;
+    -ink: #16202b;           /* the main action, current page, selection bar */
+    -ink-hover: #2a3644;
+    -ink-text: #ffffff;
+    -focus: #16202b;
+    -danger: #a3312a;
+    -danger-bg: #fbeceb;
+    -popup-shadow: rgba(22,32,43,0.16);
+    -chart-bar: #16202b;
 
-    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    /* status: the same meaning on every screen, so staff learn it once */
+    -ok: #1d7a4b;      -ok-soft: #e2f1e8;
+    -busy: #b0372c;    -busy-soft: #f8e4e1;
+    -pending: #8f5b00; -pending-soft: #f7ecd6;
+    -idle: #636d77;    -idle-soft: #eceef0;
+    -booked: #2f5a93;  -booked-soft: #e3ebf6;
+
+    -fx-font-family: "Segoe UI";
     -fx-font-size: 14px;
-    -fx-background-color: -page-bg;
+    -fx-background-color: -desk;
 }
 
 .root.dark {
-    -page-bg: radial-gradient(center 18% 0%, radius 100%, #1d4a40 0%, #0b2b26 45%, #051f20 100%);
-    -surface: #0e2a25;
-    -surface-hi: #143630;
-    -card-edge: linear-gradient(to bottom, rgba(218,241,222,0.20), rgba(218,241,222,0.05));
-    -line: rgba(142,182,155,0.18);
-    -shadow: rgba(0,0,0,0.45);
-    -btn-shadow: rgba(0,0,0,0.50);
-    -text: #daf1de;
-    -text-muted: #8eb69b;
-    -title: #f1fbf3;
-    -title-a: #daf1de;
-    -title-b: #8eb69b;
-    -accent: #8eb69b;
-    -glow: #6fe3c6;
-    -input-bg: #082320;
-    -input-border: #2a5a4d;
-    -inset-shadow: rgba(0,0,0,0.50);
-    -btn-top: #1f483e;
-    -btn-bottom: #163832;
-    -btn-hover-top: #2a5d50;
-    -btn-hover-bottom: #235347;
-    -btn-border: rgba(142,182,155,0.24);
-    -table-bg: #0c2823;
-    -th-bg: #12332d;
-    -row-hover: rgba(142,182,155,0.10);
-    -row-selected: #8eb69b;
-    -sel-text: #051f20;
-    -divider: rgba(142,182,155,0.10);
-    -chart-bar: #8eb69b;
-    -popup-bg: #0b2b26;
-    -popup-hover: #163832;
-    -menu-selected: #8eb69b;
-    -menu-selected-text: #051f20;
-    -info-bg: #12332d;
-    -err-bg: rgba(156,47,34,0.40);
-    -err-text: #ffab9c;
-    -ok-bg: #235347;
-    -ok-text: #daf1de;
-    -danger: #ff9f8f;
-    -danger-bg: rgba(255,120,100,0.12);
-    -badge-bg: #235347;
-    -badge-text: #daf1de;
-    -rail-bg: #041a1b;
-    -rail-selected: #163832;
+    -desk: #0a0c0f;
+    -paper: #191e24;
+    -paper-soft: #1e242b;
+    -text: #e6eaee;
+    -text-muted: #98a2ac;
+    -title: #f1f4f6;
+    -line: #2a3038;
+    -line-soft: #20252b;
+    -line-strong: #3a424c;
+    -hover: #1d2228;
+    -row-selected: #253141;
+    -ink: #e6eaee;
+    -ink-hover: #ffffff;
+    -ink-text: #0a0c0f;
+    -focus: #e6eaee;
+    -danger: #f0857b;
+    -danger-bg: rgba(240,133,123,0.12);
+    -popup-shadow: rgba(0,0,0,0.5);
+    -chart-bar: #b9c3cd;
+
+    -ok: #6fcf98;      -ok-soft: rgba(29,122,75,0.28);
+    -busy: #f0857b;    -busy-soft: rgba(176,55,44,0.30);
+    -pending: #e3b25c; -pending-soft: rgba(143,91,0,0.32);
+    -idle: #a7b0b9;    -idle-soft: rgba(167,176,185,0.14);
+    -booked: #8db4ea;  -booked-soft: rgba(47,90,147,0.36);
 }
 
 /* ---------- Text ---------- */
 .label { -fx-text-fill: -text; }
-.header { -fx-background-color: transparent; -fx-padding: 18 28 6 28; }
-.page-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: -title; }
-.app-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: linear-gradient(to right, -title-a, -title-b); }
-.card-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 17px; -fx-text-fill: -title; }
-.price-amount { -fx-font-weight: bold; -fx-text-fill: -title; }
 .hint { -fx-text-fill: -text-muted; -fx-font-size: 13px; }
+.page-title { -fx-font-family: "Bahnschrift"; -fx-font-size: 24px; -fx-text-fill: -title; }
+.app-title { -fx-font-family: "Bahnschrift"; -fx-font-size: 20px; -fx-text-fill: -title; }
+.card-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 15px; -fx-text-fill: -title; }
+.price-amount { -fx-font-family: "Bahnschrift"; -fx-font-size: 15px; -fx-text-fill: -title; }
+.form-label { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 13px; -fx-text-fill: -text; }
 
-/* ---------- Light/dark switch: a stone pill by day, a forest pill by night ---------- */
-.theme-toggle { -fx-cursor: hand; -fx-background-color: transparent; -fx-effect: dropshadow(gaussian, -btn-shadow, 10, 0, 0, 3); }
-.toggle-track {
-    -fx-background-insets: 0, 1.5;
-    -fx-background-radius: 20, 18.5;
-    -fx-border-color: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0.25));
-    -fx-border-width: 1.5;
-    -fx-border-radius: 20;
+/* ---------- The desk and the sheet ---------- */
+/* The sheet: the page you are working on, joined to its tab in the sidebar */
+.sheet { -fx-background-color: -paper; }
+.page-area { -fx-background-color: transparent; }
+.header {
+    -fx-background-color: transparent;
+    -fx-padding: 18 24 14 24;
+    -fx-border-color: transparent transparent -line transparent;
+    -fx-border-width: 0 0 1 0;
 }
-.toggle-day {
-    -fx-background-color:
-        linear-gradient(to bottom, #fbf9f6, #e3ddd5),
-        linear-gradient(to bottom, rgba(255,255,255,0.85), transparent 55%);
-}
-.toggle-night {
-    -fx-background-color:
-        linear-gradient(to bottom, #051f20, #235347),
-        linear-gradient(to bottom, rgba(218,241,222,0.25), transparent 55%);
-}
-.theme-toggle:focused .toggle-track { -fx-border-color: -focus; -fx-border-width: 2; }
-.toggle-decoration { -fx-font-size: 13px; -fx-letter-spacing: 1; }
-.toggle-day .toggle-decoration { -fx-text-fill: rgba(5,31,32,0.40); }
-.toggle-night .toggle-decoration { -fx-text-fill: #daf1de; }
-.toggle-thumb {
-    -fx-background-color:
-        linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(235,232,226,0.80)),
-        linear-gradient(to bottom, rgba(255,255,255,0.9), transparent 60%);
-    -fx-background-insets: 0, 2;
-    -fx-background-radius: 16, 14;
-    -fx-border-color: rgba(255,255,255,0.9);
-    -fx-border-radius: 16;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 8, 0.05, 0, 3);
-}
-.toggle-icon { -fx-font-family: "Segoe UI Symbol", "Segoe UI Emoji", sans-serif; -fx-font-size: 18px; }
-.toggle-thumb .toggle-sun { -fx-text-fill: #ec7a45; }
-.toggle-thumb .toggle-moon { -fx-text-fill: #235347; }
+.main-scroll, .main-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
 
-/* ---------- Cards: a soft panel raised off the page, lit along its top edge ---------- */
+/* ---------- Sections: ruled off like a ledger, not boxed ---------- */
 .card {
-    -fx-background-color: linear-gradient(to bottom, -surface-hi, -surface);
-    -fx-background-radius: 22;
-    -fx-border-color: -card-edge;
-    -fx-border-width: 1;
-    -fx-border-radius: 22;
-    -fx-padding: 20;
-    -fx-effect: dropshadow(gaussian, -shadow, 26, 0, 0, 10);
+    -fx-background-color: transparent;
+    -fx-border-color: -line transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 14 0 4 0;
 }
 
-/* ---------- Inputs: pills pressed slightly into the surface ---------- */
+/* ---------- Figures: a row of ledger columns, each with a rule on its left ---------- */
+.card.metric {
+    -fx-border-color: transparent transparent transparent -line;
+    -fx-border-width: 0 0 0 1;
+    -fx-padding: 2 0 2 16;
+    -fx-min-width: 150;
+}
+.metric-value { -fx-font-family: "Bahnschrift"; -fx-font-size: 30px; -fx-text-fill: -title; }
+.metric-caption { -fx-font-size: 12.5px; -fx-text-fill: -text-muted; }
+/* Only money owed to the lodge is worth colouring */
+.metric-overdue .metric-value { -fx-text-fill: -busy; }
+
+/* ---------- Inputs ---------- */
 .text-field, .combo-box-base, .text-area {
-    -fx-background-color: -input-bg;
-    -fx-background-radius: 999;
-    -fx-border-color: -input-border;
-    -fx-border-radius: 999;
+    -fx-background-color: -paper;
+    -fx-background-radius: 6;
+    -fx-border-color: -line-strong;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
     -fx-text-fill: -text;
     -fx-prompt-text-fill: -text-muted;
-    -fx-effect: innershadow(gaussian, -inset-shadow, 6, 0, 0, 2);
+    -fx-highlight-fill: -row-selected;
+    -fx-highlight-text-fill: -text;
 }
-.text-area { -fx-background-radius: 16; -fx-border-radius: 16; }
-.text-field { -fx-padding: 8 16 8 16; -fx-font-size: 14px; }
-.combo-box-base { -fx-min-height: 38px; -fx-padding: 0 6 0 6; }
-.combo-box-base .arrow { -fx-background-color: -accent; }
-.combo-box-base .list-cell { -fx-text-fill: -text; -fx-padding: 6 10 6 10; }
-.text-area .content { -fx-background-color: transparent; }
+.text-field { -fx-padding: 7 10 7 10; -fx-font-size: 14px; }
+.combo-box-base { -fx-min-height: 36px; -fx-padding: 0 4 0 4; }
+.combo-box-base .arrow { -fx-background-color: -text-muted; }
+.combo-box-base .list-cell { -fx-text-fill: -text; -fx-padding: 6 6 6 6; }
+.text-area { -fx-padding: 2; }
+.text-area .content { -fx-background-color: transparent; -fx-padding: 5 8 5 8; }
 .text-area .text { -fx-fill: -text; }
 .text-area .scroll-pane, .text-area .viewport { -fx-background-color: transparent; }
-/* Keyboard focus is the orange ring, everywhere */
-.text-field:focused, .combo-box-base:focused, .text-area:focused {
-    -fx-border-color: -focus;
-    -fx-effect: dropshadow(gaussian, -primary-glow, 10, 0.3, 0, 0);
-}
+.text-field:hover, .combo-box-base:hover, .text-area:hover { -fx-border-color: -text-muted; }
+/* Focus: a 2px ink edge. Inputs show it whenever they hold the cursor; buttons, tabs and
+   tiles only when reached with the keyboard (:focus-visible), so a mouse click leaves no ring */
+.text-field:focused { -fx-border-color: -focus; -fx-border-width: 2; -fx-padding: 6 9 6 9; }
+.combo-box-base:focused, .text-area:focused { -fx-border-color: -focus; -fx-border-width: 2; }
 /* The input an error message is about (set by BillFormView); after :focused so it wins */
-.text-field:error, .combo-box-base:error, .text-area:error {
-    -fx-border-color: -err-text;
-    -fx-effect: dropshadow(gaussian, -err-text, 6, 0.3, 0, 0);
-}
-/* A date picker is one pill: its inner text field and calendar button draw nothing of their own */
-.date-picker > .text-field, .date-picker > .text-field:focused {
+.text-field:error, .combo-box-base:error, .text-area:error { -fx-border-color: -danger; -fx-border-width: 2; }
+.text-field:error { -fx-padding: 6 9 6 9; }
+/* A date picker is one box: its inner text field and calendar button draw nothing of their own */
+.date-picker > .text-field, .date-picker > .text-field:focused, .date-picker > .text-field:hover {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-effect: null;
+    -fx-padding: 7 10 7 10;
 }
 .date-picker > .arrow-button { -fx-background-color: transparent; }
 
-/* ---------- Buttons: raised pills ---------- */
-.button {
-    -fx-background-color: linear-gradient(to bottom, -btn-top, -btn-bottom);
-    -fx-background-radius: 999;
-    -fx-border-color: -btn-border;
+/* ---------- Buttons ---------- */
+.button, .toggle-button {
+    -fx-background-color: -paper;
+    -fx-background-radius: 6;
+    -fx-border-color: -line-strong;
     -fx-border-width: 1;
-    -fx-border-radius: 999;
-    -fx-padding: 8 20 8 20;
-    -fx-min-height: 38px;
+    -fx-border-radius: 6;
+    -fx-padding: 7 16 7 16;
+    -fx-min-height: 36px;
     -fx-font-family: "Segoe UI Semibold";
     -fx-font-size: 14px;
-    -fx-text-fill: -title;
+    -fx-text-fill: -text;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, -btn-shadow, 10, 0, 0, 3);
 }
-.button:hover { -fx-background-color: linear-gradient(to bottom, -btn-hover-top, -btn-hover-bottom); }
-/* Pressed: the pill sinks into the page */
-.button:pressed {
-    -fx-background-color: -btn-bottom;
-    -fx-effect: innershadow(gaussian, -inset-shadow, 6, 0, 0, 2);
-    -fx-translate-y: 1;
-}
-.button:focused { -fx-border-color: -focus; -fx-effect: dropshadow(gaussian, -primary-glow, 12, 0.3, 0, 0); }
-/* The main action of a screen: the orange pill */
+.button:hover, .toggle-button:hover { -fx-background-color: -hover; -fx-border-color: -text-muted; }
+.button:pressed { -fx-background-color: -line-soft; }
+.button:focus-visible, .toggle-button:focus-visible { -fx-border-color: -focus; -fx-border-width: 2; -fx-padding: 6 15 6 15; }
+.button:disabled { -fx-opacity: 0.45; }
+/* The main action of a screen: solid ink */
 .button:default {
-    -fx-background-color: linear-gradient(to bottom, -primary-top, -primary-bottom);
-    -fx-border-color: transparent;
-    -fx-text-fill: -primary-text;
-    -fx-font-family: "Segoe UI";
-    -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, -primary-glow, 14, 0, 0, 4);
+    -fx-background-color: -ink;
+    -fx-border-color: -ink;
+    -fx-text-fill: -ink-text;
 }
-.button:default:hover { -fx-background-color: linear-gradient(to bottom, -primary-hover-top, -primary-hover-bottom); }
-.button:default:focused { -fx-border-color: -title; }
+.button:default:hover { -fx-background-color: -ink-hover; -fx-border-color: -ink-hover; }
+/* Focus on the ink button: a paper gap, then an ink ring */
+.button:default:focus-visible {
+    -fx-background-color: -ink, -paper, -ink;
+    -fx-background-insets: 0, 2, 3;
+    -fx-border-color: transparent;
+    -fx-padding: 7 16 7 16;
+}
 .button.danger { -fx-text-fill: -danger; }
 .button.danger:hover { -fx-background-color: -danger-bg; -fx-border-color: -danger; }
-.button.compact { -fx-padding: 6 16 6 16; -fx-min-height: 34px; }
+.button.compact { -fx-padding: 5 12 5 12; -fx-min-height: 32px; -fx-font-size: 13px; }
+.button.compact:focus-visible { -fx-padding: 4 11 4 11; }
 
 /* ---------- Menu bar and menus ---------- */
-.menu-bar { -fx-background-color: transparent; -fx-padding: 2 8 0 8; }
+.menu-bar {
+    -fx-background-color: -desk;
+    -fx-padding: 2 8 2 8;
+    -fx-border-color: transparent transparent -line transparent;
+    -fx-border-width: 0 0 1 0;
+}
 .menu-bar .label { -fx-text-fill: -text; }
-.menu-bar .menu-button { -fx-background-radius: 999; }
-.menu-bar .menu-button:hover, .menu-bar .menu:showing { -fx-background-color: -popup-hover; }
-.context-menu {
-    -fx-background-color: -popup-bg;
-    -fx-background-radius: 14;
+.menu-bar .menu-button { -fx-background-radius: 4; -fx-padding: 4 10 4 10; }
+.menu-bar .menu-button:hover, .menu-bar .menu:showing { -fx-background-color: -line-soft; }
+.context-menu, .combo-box-popup > .list-view {
+    -fx-background-color: -paper;
+    -fx-background-radius: 8;
     -fx-border-color: -line;
-    -fx-border-radius: 14;
-    -fx-padding: 6;
-    -fx-effect: dropshadow(gaussian, -shadow, 18, 0, 0, 6);
-}
-.menu-item { -fx-background-radius: 999; -fx-padding: 6 12 6 12; }
-.menu-item .label { -fx-text-fill: -text; }
-.menu-item:focused { -fx-background-color: -menu-selected; }
-.menu-item:focused .label { -fx-text-fill: -menu-selected-text; }
-.menu-item .accelerator-text { -fx-text-fill: -text-muted; }
-.menu-item:focused .accelerator-text { -fx-text-fill: -menu-selected-text; }
-.combo-box-popup > .list-view {
-    -fx-background-color: -popup-bg;
-    -fx-background-radius: 14;
-    -fx-border-color: -line;
-    -fx-border-radius: 14;
+    -fx-border-radius: 8;
     -fx-padding: 4;
-    -fx-effect: dropshadow(gaussian, -shadow, 18, 0, 0, 6);
+    -fx-effect: dropshadow(gaussian, -popup-shadow, 16, 0, 0, 4);
 }
-.combo-box-popup .list-cell { -fx-background-color: transparent; -fx-background-radius: 999; -fx-text-fill: -text; -fx-padding: 8 12 8 12; }
-.combo-box-popup .list-cell:hover, .combo-box-popup .list-cell:selected { -fx-background-color: -menu-selected; -fx-text-fill: -menu-selected-text; }
+.menu-item { -fx-background-radius: 4; -fx-padding: 6 12 6 12; }
+.menu-item .label { -fx-text-fill: -text; }
+.menu-item:focused { -fx-background-color: -row-selected; }
+.menu-item .accelerator-text { -fx-text-fill: -text-muted; }
+.combo-box-popup .list-cell { -fx-background-color: transparent; -fx-background-radius: 4; -fx-text-fill: -text; -fx-padding: 7 10 7 10; }
+.combo-box-popup .list-cell:hover { -fx-background-color: -hover; }
+.combo-box-popup .list-cell:selected { -fx-background-color: -row-selected; -fx-text-fill: -text; }
+.tooltip {
+    -fx-background-color: -ink;
+    -fx-text-fill: -ink-text;
+    -fx-background-radius: 4;
+    -fx-font-size: 12.5px;
+    -fx-padding: 5 8 5 8;
+}
 
 /* ---------- Messages ---------- */
 /* An inline message box (sign-in and pop-up form errors) */
 .status {
-    -fx-padding: 8 14 8 14;
-    -fx-background-color: -info-bg;
-    -fx-background-radius: 14;
+    -fx-padding: 8 12 8 12;
+    -fx-background-color: -paper-soft;
+    -fx-background-radius: 6;
     -fx-border-color: -line;
-    -fx-border-radius: 14;
-    -fx-text-fill: -title;
+    -fx-border-radius: 6;
+    -fx-text-fill: -text;
 }
-.status.error { -fx-background-color: -err-bg; -fx-border-color: -err-text; -fx-text-fill: -err-text; -fx-font-weight: bold; }
-.status.success { -fx-background-color: -ok-bg; -fx-border-color: -ok-bg; -fx-text-fill: -ok-text; }
-/* The main window's status line: a thin strip along the bottom, empty when there is nothing to say */
+.status.error { -fx-background-color: -busy-soft; -fx-border-color: transparent transparent transparent -busy; -fx-border-width: 0 0 0 3; -fx-text-fill: -text; }
+.status.success { -fx-background-color: -ok-soft; -fx-border-color: transparent transparent transparent -ok; -fx-border-width: 0 0 0 3; -fx-text-fill: -text; }
+/* The main window's status line: a thin strip along the bottom of the desk */
 .status.status-bar {
-    -fx-background-color: transparent;
+    -fx-background-color: -desk;
     -fx-background-radius: 0;
     -fx-border-radius: 0;
     -fx-border-color: -line transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
-    -fx-padding: 6 28 6 28;
+    -fx-padding: 6 24 6 24;
     -fx-min-height: 32px;
     -fx-font-size: 13px;
 }
-.status.status-bar.error { -fx-background-color: -err-bg; }
-.status.status-bar.success { -fx-background-color: -ok-bg; }
+.status.status-bar.error { -fx-background-color: -busy-soft; -fx-border-color: -busy transparent transparent transparent; -fx-border-width: 2 0 0 0; }
+.status.status-bar.success { -fx-background-color: -ok-soft; -fx-border-color: -ok transparent transparent transparent; -fx-border-width: 2 0 0 0; }
 
-/* ---------- Table ---------- */
+/* ---------- Tables: rows ruled like a ledger ---------- */
 .table-view {
-    -fx-background-color: -table-bg;
-    -fx-border-color: -line;
-    -fx-border-width: 1;
-    -fx-background-radius: 16;
-    -fx-border-radius: 16;
-    -fx-padding: 2;
+    -fx-background-color: -paper;
+    -fx-background-radius: 0;
+    -fx-border-color: -line transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 0;
 }
+.table-view:focused { -fx-background-color: -paper; -fx-background-insets: 0; }
 .table-view .placeholder .label { -fx-text-fill: -text-muted; }
-.table-view .column-header-background { -fx-background-color: -th-bg; -fx-background-radius: 14 14 0 0; }
+.table-view .column-header-background { -fx-background-color: -paper; }
 .table-view .column-header, .table-view .filler {
     -fx-background-color: transparent;
     -fx-border-color: transparent transparent -line transparent;
     -fx-border-width: 0 0 1 0;
-    -fx-size: 38;
+    -fx-size: 34;
 }
-.table-view .column-header .label { -fx-font-family: "Segoe UI Semibold"; -fx-text-fill: -text-muted; -fx-font-size: 13px; }
-/* Rows are separated by a hairline; the empty rows that fill the rest of a table stay blank */
-.table-row-cell { -fx-cell-size: 40; -fx-background-color: transparent; -fx-border-color: transparent transparent -divider transparent; -fx-border-width: 0 0 1 0; }
+.table-view .column-header .label {
+    -fx-font-family: "Segoe UI Semibold";
+    -fx-text-fill: -text-muted;
+    -fx-font-size: 12.5px;
+    -fx-alignment: CENTER-LEFT;
+}
+.table-row-cell {
+    -fx-cell-size: 38;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -line-soft transparent;
+    -fx-border-width: 0 0 1 0;
+}
 .table-row-cell:empty { -fx-border-color: transparent; }
-.table-row-cell:hover { -fx-background-color: -row-hover; }
+.table-row-cell:hover { -fx-background-color: -hover; }
 .table-row-cell:empty:hover { -fx-background-color: transparent; }
-.table-row-cell:selected { -fx-background-color: -row-selected; }
-.table-row-cell:selected .table-cell { -fx-text-fill: -sel-text; }
-/* No vertical lines between columns: the gaps and alignment already separate them */
+/* The selected row: a pale band with an ink bar down its left edge */
+.table-row-cell:selected, .table-row-cell:selected:hover {
+    -fx-background-color: -ink, -row-selected;
+    -fx-background-insets: 0, 0 0 0 3;
+}
+.table-row-cell:selected .table-cell { -fx-text-fill: -text; }
 .table-cell { -fx-alignment: CENTER-LEFT; -fx-padding: 0 12 0 12; -fx-text-fill: -text; -fx-border-color: transparent; }
+.table-row-cell.voided .table-cell { -fx-strikethrough: true; -fx-text-fill: -text-muted; -fx-opacity: 0.7; }
 
-/* ---------- Pop-up windows (receipt, confirm, about) ---------- */
-.dialog-pane { -fx-background-color: -popup-bg; }
-.dialog-pane > .header-panel { -fx-background-color: -popup-hover; }
+/* ---------- Pop-up windows (receipt, confirm, forms, about) ---------- */
+.dialog-pane { -fx-background-color: -paper; -fx-padding: 0; }
+.dialog-pane > .header-panel {
+    -fx-background-color: -paper;
+    -fx-padding: 18 20 10 20;
+    -fx-border-color: transparent transparent -line transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.dialog-pane > .header-panel .label { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 16px; }
+.dialog-pane > .content { -fx-padding: 16 20 16 20; }
 .dialog-pane .label { -fx-text-fill: -text; }
-.dialog-pane > .button-bar > .container { -fx-background-color: -popup-bg; }
-.dialog-pane .button { -fx-min-width: 96px; }
+.dialog-pane > .button-bar > .container {
+    -fx-background-color: -paper-soft;
+    -fx-padding: 12 20 12 20;
+    -fx-border-color: -line transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+.dialog-pane .button { -fx-min-width: 90px; }
 
 /* ---------- Receipt: always white paper with dark ink, in both themes ---------- */
 .receipt-paper { -fx-background-color: #fffef8; }
 .receipt-edge { -fx-fill: #fffef8; }
-.receipt-paper .label { -fx-text-fill: #222222; -fx-font-family: "Consolas", "Courier New", monospace; }
+.receipt-paper .label { -fx-text-fill: #222222; -fx-font-family: "Consolas"; }
 .receipt-title { -fx-font-size: 22px; -fx-font-weight: bold; }
 .receipt-text { -fx-font-size: 13px; }
 .receipt-small { -fx-font-size: 11px; -fx-text-fill: #555555; }
@@ -367,217 +323,187 @@
 }
 .receipt-paper .label.receipt-stamp-paid { -fx-text-fill: #1e7a34; -fx-border-color: #1e7a34; }
 .receipt-paper .label.receipt-stamp-due { -fx-text-fill: #b03030; -fx-border-color: #b03030; }
-.main-scroll, .main-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
 .receipt-scroll, .receipt-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
-/* Thin pill scroll bars in the theme's colours (the built-in ones are bright grey, even in dark mode) */
+
+/* ---------- Scroll bars: thin, in the theme's colours ---------- */
 .scroll-bar { -fx-background-color: transparent; }
-.scroll-bar .thumb { -fx-background-color: -input-border; -fx-background-radius: 999; -fx-background-insets: 2; }
+.scroll-bar .thumb { -fx-background-color: -line-strong; -fx-background-radius: 4; -fx-background-insets: 3; }
 .scroll-bar .thumb:hover { -fx-background-color: -text-muted; }
-.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-background-color: transparent; }
-.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-background-color: -text-muted; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-background-color: transparent; -fx-padding: 2; }
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-background-color: transparent; }
 .scroll-pane > .corner { -fx-background-color: transparent; }
 
-/* ---------- Sign-in and first-run screens: the card floats over the night sky ---------- */
-.auth-card { -fx-spacing: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 40, 0, 0, 14); }
-.auth-card .app-title { -fx-font-size: 30px; }
-.auth-card .form-label { -fx-padding: 6 0 0 4; -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 13px; -fx-text-fill: -text-muted; }
+/* ---------- Sign-in and first-run screens ---------- */
+/* The left half is the lodge's name on ink; the right half is the form on paper */
+.auth-brand { -fx-background-color: #16202b; -fx-padding: 40 44 40 44; }
+.auth-brand .label { -fx-text-fill: #e6eaee; }
+.auth-wordmark { -fx-font-family: "Bahnschrift"; -fx-font-size: 40px; -fx-text-fill: #ffffff; }
+.auth-date { -fx-font-family: "Bahnschrift"; -fx-font-size: 18px; -fx-text-fill: #b9c3cd; }
+.auth-tagline { -fx-font-size: 13px; -fx-text-fill: #98a2ac; }
+.auth-form-side { -fx-background-color: -paper; -fx-padding: 24; }
+.auth-card {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-spacing: 8;
+}
+.auth-card .card-title { -fx-font-family: "Bahnschrift"; -fx-font-size: 24px; }
+.auth-card .form-label { -fx-padding: 8 0 0 0; }
 
 /* ---------- Who is signed in ---------- */
-.user-badge { -fx-font-size: 13px; -fx-text-fill: -text-muted; }
+.user-badge { -fx-font-size: 13px; -fx-text-fill: -text; }
 .user-badge-role {
     -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -badge-text;
-    -fx-background-color: -badge-bg;
-    -fx-background-radius: 999;
-    -fx-padding: 3 12 3 12;
+    -fx-text-fill: -text-muted;
+    -fx-border-color: -line-strong;
+    -fx-border-radius: 4;
+    -fx-padding: 1 7 1 7;
 }
+.theme-toggle { -fx-min-width: 96px; }
 
-/* =====================================================================
-   Front desk screens
-   Semantic colours, the same in both themes so staff learn them once:
-   green = available / paid, red = occupied / owing, amber = dirty / pending,
-   grey = maintenance / finished, blue = booked.
-   ===================================================================== */
-.root {
-    -ok: #2f7d55;      -ok-soft: #dcefe2;
-    -busy: #b83c32;    -busy-soft: #f6e0dc;
-    -pending: #a8670f; -pending-soft: #f6e8cf;
-    -idle: #66706b;    -idle-soft: #e6e2dc;
-    -booked: #3e6595;  -booked-soft: #e0e8f3;
-}
-.root.dark {
-    -ok-soft: rgba(47,125,85,0.42);
-    -busy-soft: rgba(184,60,50,0.42);
-    -pending-soft: rgba(168,103,15,0.45);
-    -idle-soft: rgba(218,241,222,0.08);
-    -booked-soft: rgba(62,101,149,0.50);
-}
-
-/* ---------- Sidebar: the app's name, the two quick actions, then the pages ---------- */
+/* ---------- Sidebar: the lodge's name, today's date, the two quick actions, then the pages ---------- */
+/* No padding on the right: the current page's tab runs into the sheet */
 .sidebar {
-    -fx-background-color: -rail-bg;
-    -fx-padding: 22 14 18 14;
-    -fx-pref-width: 214;
+    -fx-background-color: -desk;
+    -fx-padding: 20 0 16 14;
+    -fx-pref-width: 212;
     -fx-min-width: 196;
 }
-.sidebar .label { -fx-text-fill: -rail-text; }
-.sidebar .app-title { -fx-font-size: 21px; -fx-text-fill: -rail-text; -fx-padding: 0 8 14 8; }
+.sidebar .app-title { -fx-padding: 0 0 0 6; }
+.sidebar-date { -fx-font-family: "Bahnschrift"; -fx-font-size: 13px; -fx-text-fill: -text-muted; -fx-padding: 0 0 14 6; }
 .nav-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 999;
+    -fx-background-radius: 6 0 0 6;
     -fx-border-color: transparent;
-    -fx-border-radius: 999;
-    -fx-border-width: 1.5;
+    -fx-border-radius: 6 0 0 6;
+    -fx-border-width: 0;
     -fx-alignment: CENTER-LEFT;
-    -fx-padding: 9 16 9 16;
-    -fx-text-fill: -rail-text;
+    -fx-padding: 8 14 8 12;
+    -fx-min-height: 36px;
+    -fx-text-fill: -text-muted;
+    -fx-font-family: "Segoe UI";
     -fx-font-size: 14px;
     -fx-cursor: hand;
 }
-.nav-button:hover { -fx-background-color: -rail-hover; }
-/* The current page: a dark pill with a mint glow */
-.nav-button:selected {
-    -fx-background-color: -rail-selected;
-    -fx-border-color: -glow;
-    -fx-text-fill: -rail-text;
+.nav-button:hover { -fx-background-color: -line-soft; -fx-text-fill: -text; }
+/* The current page: a paper tab joined to the sheet */
+.nav-button:selected, .nav-button:selected:hover {
+    -fx-background-color: -paper;
+    -fx-text-fill: -text;
     -fx-font-family: "Segoe UI Semibold";
-    -fx-effect: dropshadow(gaussian, -glow, 12, 0.2, 0, 0);
 }
-.nav-button:focused { -fx-border-color: -focus; }
-.quick-action {
-    -fx-padding: 8 14 8 14;
-    -fx-background-color: -rail-hover;
-    -fx-border-color: -rail-line;
-    -fx-text-fill: -rail-text;
-    -fx-effect: null;
-}
-.quick-action:hover { -fx-background-color: rgba(218,241,222,0.12); -fx-border-color: -rail-muted; }
-.quick-action.quick-primary {
-    -fx-background-color: linear-gradient(to bottom, -primary-top, -primary-bottom);
+.nav-button:focus-visible { -fx-border-color: -focus; -fx-border-width: 2 0 2 2; -fx-padding: 6 14 6 10; }
+.quick-action { -fx-alignment: CENTER-LEFT; }
+/* New booking: the one ink button in the sidebar (not a default button, so Enter stays with the page) */
+.button.quick-primary { -fx-background-color: -ink; -fx-border-color: -ink; -fx-text-fill: -ink-text; }
+.button.quick-primary:hover { -fx-background-color: -ink-hover; -fx-border-color: -ink-hover; }
+.button.quick-primary:focus-visible {
+    -fx-background-color: -ink, -desk, -ink;
+    -fx-background-insets: 0, 2, 3;
     -fx-border-color: transparent;
-    -fx-text-fill: -primary-text;
-    -fx-font-family: "Segoe UI";
-    -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, -primary-glow, 14, 0, 0, 4);
+    -fx-padding: 7 16 7 16;
 }
-.quick-action.quick-primary:hover { -fx-background-color: linear-gradient(to bottom, -primary-hover-top, -primary-hover-bottom); }
 
-/* ---------- Metric tiles: a number and what it counts ---------- */
-.metric { -fx-padding: 16 20 16 20; -fx-min-width: 150; }
-.metric-value { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: -title; }
-.metric-caption { -fx-font-size: 12px; -fx-text-fill: -text-muted; }
-/* Only money owed to the lodge is worth colouring */
-.metric-overdue .metric-value { -fx-text-fill: -busy; }
-.root.dark .metric-overdue .metric-value { -fx-text-fill: #ff9a8a; }
-
-/* ---------- Status chips ---------- */
+/* ---------- Status chips: small tags in the status colours ---------- */
 .chip {
-    -fx-padding: 2 10 2 10;
-    -fx-background-radius: 999;
-    -fx-border-radius: 999;
+    -fx-padding: 2 8 2 8;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
     -fx-border-width: 0;
+    -fx-font-family: "Segoe UI Semibold";
     -fx-font-size: 12px;
-    -fx-font-weight: bold;
 }
 .label.status-available, .label.stay-checked-out   { -fx-background-color: -ok-soft;      -fx-border-color: -ok;      -fx-text-fill: -ok; }
 .label.status-occupied,  .label.stay-checked-in    { -fx-background-color: -busy-soft;    -fx-border-color: -busy;    -fx-text-fill: -busy; }
 .label.status-dirty                                { -fx-background-color: -pending-soft; -fx-border-color: -pending; -fx-text-fill: -pending; }
 .label.status-maintenance, .label.stay-cancelled   { -fx-background-color: -idle-soft;    -fx-border-color: -idle;    -fx-text-fill: -idle; }
 .label.stay-booked                                 { -fx-background-color: -booked-soft;  -fx-border-color: -booked;  -fx-text-fill: -booked; }
-.label.stay-owing                                  { -fx-background-color: -busy;         -fx-border-color: -busy;    -fx-text-fill: white; }
-.root.dark .label.status-available, .root.dark .label.stay-checked-out,
-.root.dark .label.status-occupied, .root.dark .label.stay-checked-in,
-.root.dark .label.status-dirty, .root.dark .label.status-maintenance,
-.root.dark .label.stay-cancelled, .root.dark .label.stay-booked { -fx-text-fill: white; }
+.label.stay-owing                                  { -fx-background-color: -busy;         -fx-border-color: -busy;    -fx-text-fill: -paper; }
 
 /* ---------- Tape chart ---------- */
-.tape { -fx-background-color: -table-bg; -fx-border-color: -line; }
+.tape { -fx-background-color: -paper; -fx-border-color: -line; -fx-border-width: 1 0 1 0; }
 .tape-head {
-    -fx-background-color: -th-bg;
+    -fx-background-color: -paper;
     -fx-text-fill: -text-muted;
-    -fx-font-family: "Segoe UI Semibold";
-    -fx-font-size: 12px;
+    -fx-font-family: "Bahnschrift";
+    -fx-font-size: 12.5px;
     -fx-padding: 6 4 6 8;
-    -fx-border-color: transparent -divider -line transparent;
+    -fx-border-color: transparent -line-soft -line transparent;
     -fx-border-width: 0 1 1 0;
 }
-.tape-head.tape-today { -fx-background-color: linear-gradient(to bottom, -primary-top, -primary-bottom); -fx-text-fill: -primary-text; }
+.tape-head.tape-today { -fx-background-color: -ink; -fx-text-fill: -ink-text; }
 .tape-room-cell {
     -fx-padding: 6 8 6 10;
-    -fx-border-color: transparent -divider -divider transparent;
+    -fx-border-color: transparent -line -line-soft transparent;
     -fx-border-width: 0 1 1 0;
     -fx-min-height: 52;
 }
-.tape-room { -fx-font-family: "Segoe UI Semibold"; -fx-text-fill: -title; }
+.tape-room { -fx-font-family: "Bahnschrift"; -fx-font-size: 15px; -fx-text-fill: -title; }
 .tape-cell {
     -fx-min-height: 52;
-    -fx-border-color: transparent -divider -divider transparent;
+    -fx-border-color: transparent -line-soft -line-soft transparent;
     -fx-border-width: 0 1 1 0;
 }
-.tape-weekend { -fx-background-color: -th-bg; }
-.tape-cell.tape-today { -fx-background-color: rgba(236,122,69,0.08); }
+.tape-weekend { -fx-background-color: -paper-soft; }
+.tape-cell.tape-today { -fx-background-color: -row-selected; }
 .tape-free { -fx-cursor: hand; }
-.tape-free:hover { -fx-background-color: -row-hover; }
-.tape-bar {
-    -fx-background-radius: 999;
-    -fx-border-radius: 999;
-    -fx-border-width: 0;
-    -fx-padding: 0 12 0 12;
+.tape-free:hover { -fx-background-color: -hover; }
+/* A stay: a tag in its status colour with a solid edge where it starts */
+.label.tape-bar {
+    -fx-background-radius: 3;
+    -fx-border-radius: 3 0 0 3;
+    -fx-border-width: 0 0 0 3;
+    -fx-padding: 0 10 0 9;
+    -fx-font-family: "Segoe UI Semibold";
     -fx-font-size: 12px;
-    -fx-font-weight: bold;
     -fx-cursor: hand;
 }
-.tape-bar:hover { -fx-effect: dropshadow(gaussian, -btn-shadow, 8, 0, 0, 2); }
+.label.tape-bar:hover { -fx-opacity: 0.85; }
 
-/* ---------- Room tiles: a coloured strip down the left, raised like the panels ---------- */
-/* Three layers: the strip colour, a solid panel over all but the strip, then the tint
-   (the dark theme's tints are see-through, so they need the panel under them) */
+/* ---------- Room board: each room is a key tag ---------- */
+/* A band of the status colour across the top, the room number large below it */
 .room-tile {
-    -fx-background-insets: 0, 0 0 0 6, 0 0 0 6;
-    -fx-background-radius: 18, 0 18 18 0, 0 18 18 0;
-    -fx-border-color: transparent;
-    -fx-border-width: 2;
-    -fx-border-radius: 18;
-    -fx-padding: 12 14 12 20;
+    -fx-background-insets: 0, 4 0 0 0;
+    -fx-background-radius: 6, 0 0 6 6;
+    -fx-border-color: -line;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 14 14 12 14;
     -fx-alignment: TOP-LEFT;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, -shadow, 14, 0, 0, 5);
 }
-.tile-available   { -fx-background-color: -ok, -surface, -ok-soft; }
-.tile-occupied    { -fx-background-color: -busy, -surface, -busy-soft; }
-.tile-dirty       { -fx-background-color: -pending, -surface, -pending-soft; }
-.tile-maintenance { -fx-background-color: -idle, -surface, -idle-soft; }
-/* The picked room glows mint, like the current page in the sidebar */
-.room-tile:selected { -fx-border-color: -glow; -fx-effect: dropshadow(gaussian, -glow, 16, 0.25, 0, 0); }
-.room-tile:focused  { -fx-border-color: -focus; }
-.tile-number { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 26px; -fx-text-fill: -title; }
-.tile-type { -fx-font-size: 12px; -fx-text-fill: -text-muted; }
+.tile-available   { -fx-background-color: -ok, -paper; }
+.tile-occupied    { -fx-background-color: -busy, -paper; }
+.tile-dirty       { -fx-background-color: -pending, -paper; }
+.tile-maintenance { -fx-background-color: -idle, -paper; }
+.room-tile:hover { -fx-border-color: -text-muted; }
+.room-tile:selected { -fx-border-color: -ink; -fx-border-width: 2; -fx-padding: 13 13 11 13; }
+.room-tile:focus-visible { -fx-border-color: -focus; -fx-border-width: 2; -fx-padding: 13 13 11 13; }
+.tile-number { -fx-font-family: "Bahnschrift"; -fx-font-size: 34px; -fx-text-fill: -title; }
+.tile-type { -fx-font-size: 12.5px; -fx-text-fill: -text-muted; }
 
 /* ---------- Folio ---------- */
-.folio-guest { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 24px; -fx-text-fill: -title; }
+.folio-guest { -fx-font-family: "Bahnschrift"; -fx-font-size: 26px; -fx-text-fill: -title; }
 .sticky-footer {
-    -fx-background-color: -surface;
+    -fx-background-color: -paper-soft;
     -fx-border-color: -line transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
     -fx-padding: 14 22 14 22;
 }
-.balance-due { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 24px; }
+.balance-due { -fx-font-family: "Bahnschrift"; -fx-font-size: 26px; }
 .balance-due.owing { -fx-text-fill: -busy; }
 .balance-due.settled { -fx-text-fill: -ok; }
-.root.dark .balance-due.owing { -fx-text-fill: #ff9a8a; }
-.root.dark .balance-due.settled { -fx-text-fill: #9fe0b8; }
-.table-row-cell.voided .table-cell { -fx-strikethrough: true; -fx-text-fill: -text-muted; -fx-opacity: 0.7; }
 .split-grid { -fx-padding: 10 0 0 0; }
+
+/* ---------- Charts ---------- */
 .chart { -fx-padding: 4; }
 .chart-plot-background { -fx-background-color: transparent; }
-.chart-vertical-grid-lines, .chart-horizontal-grid-lines { -fx-stroke: -divider; }
-.chart-bar { -fx-bar-fill: -chart-bar; -fx-background-radius: 10 10 0 0; }
+.chart-vertical-grid-lines { -fx-stroke: transparent; }
+.chart-horizontal-grid-lines { -fx-stroke: -line-soft; }
+.chart-bar { -fx-bar-fill: -chart-bar; -fx-background-radius: 3 3 0 0; }
 .axis { -fx-tick-label-fill: -text-muted; }
 .axis-label { -fx-text-fill: -text-muted; }
-
-/* The page behind the panels of the main window: the root's lit stone (or forest) shows through */
-.page-area { -fx-background-color: transparent; }
+.chart-legend { -fx-background-color: transparent; }
 
 /* The one-time password shown to an admin: big and monospaced, so 4 and 9 are easy to tell apart */
-.temp-password { -fx-font-family: "Consolas", "Menlo", monospace; -fx-font-size: 18px; -fx-font-weight: bold; }
+.temp-password { -fx-font-family: "Consolas"; -fx-font-size: 18px; -fx-font-weight: bold; }

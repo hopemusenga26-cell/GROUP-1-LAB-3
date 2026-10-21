@@ -34,7 +34,7 @@ public final class Ui {
 
     private Ui() { }
 
-    /** A rounded panel with a serif heading, or no heading when the title is null. */
+    /** A section ruled off from what is above it, with a heading (or none when the title is null). */
     public static VBox card(String title, Node... content) {
         return card(title, List.of(), content);
     }
