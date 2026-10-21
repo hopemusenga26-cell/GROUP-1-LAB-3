@@ -5,7 +5,7 @@ import lodgebilling.model.Theme;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import lodgebilling.security.PasswordPolicy;
+import lodgebilling.model.security.PasswordPolicy;
 
 /**
  * First run only: there are no accounts yet, so the person installing the app

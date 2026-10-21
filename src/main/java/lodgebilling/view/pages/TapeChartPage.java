@@ -13,12 +13,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import lodgebilling.controller.PageContext;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationStatus;
 import lodgebilling.model.Room;
-import lodgebilling.security.Permission;
+import lodgebilling.model.security.Permission;
 import lodgebilling.view.Ui;
 
 import java.time.DayOfWeek;

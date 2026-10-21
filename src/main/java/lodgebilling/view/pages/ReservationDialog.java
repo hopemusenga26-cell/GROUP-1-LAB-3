@@ -7,6 +7,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import lodgebilling.controller.PageContext;
 import lodgebilling.model.Bill;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
@@ -14,7 +15,7 @@ import lodgebilling.model.ReservationForm;
 import lodgebilling.model.ReservationStatus;
 import lodgebilling.model.Room;
 import lodgebilling.model.RoomStatus;
-import lodgebilling.service.LodgeService;
+import lodgebilling.model.service.LodgeService;
 import lodgebilling.view.FormDialog;
 import lodgebilling.view.Ui;
 

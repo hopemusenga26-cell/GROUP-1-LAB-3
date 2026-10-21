@@ -13,7 +13,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import lodgebilling.model.Theme;
-import lodgebilling.security.PasswordHasher;
+import lodgebilling.model.security.PasswordHasher;
 
 /**
  * Shows a generated one-time password exactly once, so the admin can pass it on.

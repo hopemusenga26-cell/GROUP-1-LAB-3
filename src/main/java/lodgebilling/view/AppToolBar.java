@@ -7,7 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import lodgebilling.controller.BillingActions;
 import lodgebilling.model.BillingModel;
-import lodgebilling.security.Permission;
+import lodgebilling.model.security.Permission;
 
 import java.util.List;
 

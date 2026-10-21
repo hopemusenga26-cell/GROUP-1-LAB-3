@@ -11,12 +11,12 @@ import lodgebilling.model.StatusMessage;
 import lodgebilling.model.Theme;
 import lodgebilling.model.ValidationException;
 import lodgebilling.view.MainView;
-import lodgebilling.data.AuditLog;
-import lodgebilling.data.DataException;
-import lodgebilling.security.AccessDeniedException;
-import lodgebilling.security.Permission;
-import lodgebilling.service.AuthService;
-import lodgebilling.service.LodgeService;
+import lodgebilling.dao.AuditLogDao;
+import lodgebilling.dao.DataException;
+import lodgebilling.model.security.AccessDeniedException;
+import lodgebilling.model.security.Permission;
+import lodgebilling.model.service.AuthService;
+import lodgebilling.model.service.LodgeService;
 
 import java.util.Optional;
 import java.util.logging.Level;
@@ -38,14 +38,14 @@ public class BillingController implements BillingActions {
     private final Stage stage;
     private final MainView view;
     private final AuthService auth;
-    private final AuditLog audit;
+    private final AuditLogDao audit;
     private final Runnable onLogout;
     private final LodgeService lodge;
 
     /**
      * @param onLogout called after the user logs out, to show the sign-in screen again
      */
-    public BillingController(BillingModel model, Stage stage, AuthService auth, AuditLog audit,
+    public BillingController(BillingModel model, Stage stage, AuthService auth, AuditLogDao audit,
                              LodgeService lodge, Runnable onLogout) {
         this.lodge = lodge;
         this.model = model;

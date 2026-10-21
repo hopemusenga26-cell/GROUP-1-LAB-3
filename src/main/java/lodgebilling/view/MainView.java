@@ -17,17 +17,18 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import lodgebilling.controller.BillingActions;
-import lodgebilling.data.AuditLog;
+import lodgebilling.dao.AuditLogDao;
+import lodgebilling.model.AuditEntry;
 import lodgebilling.model.Bill;
 import lodgebilling.model.BillFormData;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.FormField;
-import lodgebilling.security.Permission;
-import lodgebilling.service.AuthService;
-import lodgebilling.service.LodgeService;
+import lodgebilling.model.security.Permission;
+import lodgebilling.model.service.AuthService;
+import lodgebilling.model.service.LodgeService;
 import lodgebilling.view.pages.DashboardPage;
 import lodgebilling.view.pages.Page;
-import lodgebilling.view.pages.PageContext;
+import lodgebilling.controller.PageContext;
 import lodgebilling.view.pages.ReportsPage;
 import lodgebilling.view.pages.ReservationDialog;
 import lodgebilling.view.pages.RoomsPage;
@@ -67,7 +68,7 @@ public class MainView extends BorderPane {
     // Kept so it can be removed again at logout (the Scene outlives this view)
     private ChangeListener<Node> focusWatcher;
 
-    public MainView(BillingModel model, BillingActions actions, Stage stage, LodgeService lodge, AuditLog audit,
+    public MainView(BillingModel model, BillingActions actions, Stage stage, LodgeService lodge, AuditLogDao audit,
                     AuthService auth) {
         this.form = new BillFormView(actions, model.statusProperty());
         this.table = new BillTableView(model.bills(), actions::viewReceipt, actions::deleteSelected);
@@ -254,7 +255,7 @@ public class MainView extends BorderPane {
     public boolean confirmDelete(Bill bill) { return dialogs.confirmDelete(bill); }
     public void showAbout()                 { dialogs.showAbout(); }
     public void manageUsers()               { showPage(AppPage.STAFF); }
-    public void showAuditLog(List<AuditLog.Entry> entries) { dialogs.showAuditLog(entries); }
+    public void showAuditLog(List<AuditEntry> entries) { dialogs.showAuditLog(entries); }
     public boolean changePassword(boolean forced, ChangePasswordDialog.Change change) {
         return dialogs.changePassword(forced, change);
     }

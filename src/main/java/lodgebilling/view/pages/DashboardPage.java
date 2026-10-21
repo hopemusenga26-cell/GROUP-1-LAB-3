@@ -13,12 +13,14 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import lodgebilling.data.AuditLog;
+import lodgebilling.controller.PageContext;
+import lodgebilling.model.AuditAction;
+import lodgebilling.model.AuditEntry;
 import lodgebilling.model.DashboardData;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.RoomStatus;
-import lodgebilling.security.Permission;
+import lodgebilling.model.security.Permission;
 import lodgebilling.view.Ui;
 
 import java.time.ZoneId;
@@ -33,11 +35,11 @@ public class DashboardPage implements Page {
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("dd MMM HH:mm")
             .withZone(ZoneId.systemDefault());
     // Account events are only shown to admins
-    private static final Set<AuditLog.Action> ACCOUNT_EVENTS = EnumSet.of(AuditLog.Action.LOGIN,
-            AuditLog.Action.LOGIN_FAILED, AuditLog.Action.LOGOUT, AuditLog.Action.ACCOUNT_LOCKED,
-            AuditLog.Action.SETUP, AuditLog.Action.USER_CREATED, AuditLog.Action.USER_ENABLED,
-            AuditLog.Action.USER_DISABLED, AuditLog.Action.ROLE_CHANGED, AuditLog.Action.PASSWORD_RESET,
-            AuditLog.Action.PASSWORD_CHANGED);
+    private static final Set<AuditAction> ACCOUNT_EVENTS = EnumSet.of(AuditAction.LOGIN,
+            AuditAction.LOGIN_FAILED, AuditAction.LOGOUT, AuditAction.ACCOUNT_LOCKED,
+            AuditAction.SETUP, AuditAction.USER_CREATED, AuditAction.USER_ENABLED,
+            AuditAction.USER_DISABLED, AuditAction.ROLE_CHANGED, AuditAction.PASSWORD_RESET,
+            AuditAction.PASSWORD_CHANGED);
 
     private final PageContext ctx;
     private final HBox metrics = new HBox(14);
@@ -95,9 +97,9 @@ public class DashboardPage implements Page {
             }
             activity.getChildren().clear();
             boolean admin = ctx.can(Permission.MANAGE_USERS);
-            List<AuditLog.Entry> entries = ctx.audit().latest(60).stream()
+            List<AuditEntry> entries = ctx.audit().latest(60).stream()
                     .filter(e -> admin || !ACCOUNT_EVENTS.contains(e.action())).limit(10).toList();
-            for (AuditLog.Entry e : entries) {
+            for (AuditEntry e : entries) {
                 Label l = new Label(TIME.format(e.at()) + "   " + e.username() + "   "
                         + e.action().name().replace('_', ' ').toLowerCase() + "   " + e.details());
                 l.setWrapText(true);

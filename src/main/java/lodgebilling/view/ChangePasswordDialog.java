@@ -3,8 +3,8 @@ package lodgebilling.view;
 import javafx.scene.control.PasswordField;
 import javafx.stage.Window;
 import lodgebilling.model.Theme;
-import lodgebilling.security.PasswordPolicy;
-import lodgebilling.service.AuthException;
+import lodgebilling.model.security.PasswordPolicy;
+import lodgebilling.model.service.AuthException;
 
 /** Asks for the current password and a new one (typed twice). */
 public final class ChangePasswordDialog {

@@ -4,11 +4,10 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import lodgebilling.data.AuditLog;
-import lodgebilling.data.AuditLog.Action;
-import lodgebilling.data.BillRepository;
-import lodgebilling.security.Permission;
-import lodgebilling.security.Session;
+import lodgebilling.dao.AuditLogDao;
+import lodgebilling.dao.BillDao;
+import lodgebilling.model.security.Permission;
+import lodgebilling.model.security.Session;
 
 import java.time.LocalDateTime;
 
@@ -25,8 +24,8 @@ public class BillingModel {
     // Nothing to report: the status bar (shared by every page) stays empty rather than saying "Ready."
     private static final StatusMessage READY = StatusMessage.info("");
 
-    private final BillRepository repository;
-    private final AuditLog audit;
+    private final BillDao billDao;
+    private final AuditLogDao audit;
     private final Session session;
 
     private final ObservableList<Bill> bills = FXCollections.observableArrayList();
@@ -38,12 +37,12 @@ public class BillingModel {
     private BillInput lastSavedInput;
     private String lastSavedReceiptNumber;
 
-    public BillingModel(BillRepository repository, AuditLog audit, Session session, Theme initialTheme) {
-        this.repository = repository;
+    public BillingModel(BillDao billDao, AuditLogDao audit, Session session, Theme initialTheme) {
+        this.billDao = billDao;
         this.audit = audit;
         this.session = session;
         this.theme = new SimpleObjectProperty<>(initialTheme);
-        bills.setAll(repository.findAll());
+        bills.setAll(billDao.findAll());
     }
 
     // ---------- Observable state ----------
@@ -82,20 +81,20 @@ public class BillingModel {
     /** Stores and returns a new bill; the database gives it the next number (R001, R002, ...). */
     public Bill save(BillInput input) {
         session.require(Permission.CREATE_BILL);
-        Bill bill = repository.insert(input, LocalDateTime.now(), session.username());
+        Bill bill = billDao.insert(input, LocalDateTime.now(), session.username());
         bills.add(bill);
         lastSavedInput = input;
         lastSavedReceiptNumber = bill.getReceiptNumber();
-        audit.record(session.username(), Action.BILL_SAVED,
+        audit.record(session.username(), AuditAction.BILL_SAVED,
                 bill.getReceiptNumber() + " for " + bill.getGuestName() + ", total " + Money.format(bill.getTotal()));
         return bill;
     }
 
     public void delete(Bill bill) {
         session.require(Permission.DELETE_BILL);
-        repository.delete(bill.getReceiptNumber());
+        billDao.delete(bill.getReceiptNumber());
         bills.remove(bill);
-        audit.record(session.username(), Action.BILL_DELETED,
+        audit.record(session.username(), AuditAction.BILL_DELETED,
                 bill.getReceiptNumber() + " for " + bill.getGuestName() + ", total " + Money.format(bill.getTotal()));
         // If the bill still in the form was deleted, allow it to be saved again
         if (bill.getReceiptNumber().equals(lastSavedReceiptNumber)) {

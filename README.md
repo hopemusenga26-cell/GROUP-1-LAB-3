@@ -117,20 +117,24 @@ In the receipts table, Enter opens the selected receipt and Delete asks to delet
 
 ## Project structure
 
-The project follows the MVC pattern, with repositories for storage.
+The project follows the MVC pattern, with the DAO (data access object) pattern for storage. Each table
+has an interface in `dao/` that says what can be done with it (for example `BillDao`), and a class that
+does it in SQLite (`SqliteBillDao`). The services and screens only use the interfaces; `LodgeBillingApp`
+is the one place that creates the SQLite classes.
 
 ```
 src/main/java/lodgebilling/
 ├── LodgeBillingApp.java      Entry point: opens the database, then setup -> sign in -> main window
 ├── Launcher.java             Start this one from IntelliJ
-├── model/                    Bill, RoomType, validation, the observable app state
-├── data/                     SQLite: receipts, users, rooms, bookings, folio lines, settings, audit log
-├── security/                 Roles, permissions, password hashing and rules, the signed-in session
-├── service/                  AuthService (sign-in, accounts) and LodgeService (front-desk rules)
+├── model/                    Bill, RoomType, audit entries, report rows, validation, the observable app state
+│   ├── security/             Roles, permissions, password hashing and rules, the signed-in session
+│   └── service/              AuthService (sign-in, accounts) and LodgeService (front-desk rules)
+├── dao/                      DAO interfaces and their SQLite classes: receipts, users, rooms, bookings,
+│                             folio lines, settings, reports, audit log; plus the database connection
 ├── view/                     JavaFX screens: setup, login, main window, receipts, dialogs
 │   └── pages/                Dashboard, tape chart, stays, rooms, reports, folio window, booking dialog
-├── util/                     CsvWriter for the report exports
-└── controller/               Connects the views to the model
+└── controller/               Connects the views to the model: BillingController, PageContext (what
+                              every page needs), CsvWriter for the report exports
 src/main/resources/           Stylesheet (lodge.css)
 src/test/java/lodgebilling/   JUnit tests
 ```

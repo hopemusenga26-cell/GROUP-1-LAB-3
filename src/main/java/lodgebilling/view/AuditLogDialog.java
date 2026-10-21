@@ -9,7 +9,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Window;
-import lodgebilling.data.AuditLog;
+import lodgebilling.model.AuditAction;
+import lodgebilling.model.AuditEntry;
 import lodgebilling.model.Theme;
 
 import java.time.Instant;
@@ -25,10 +26,10 @@ public final class AuditLogDialog {
 
     private AuditLogDialog() { }
 
-    public static void show(Window owner, Theme theme, List<AuditLog.Entry> entries) {
-        TableView<AuditLog.Entry> table = new TableView<>(FXCollections.observableArrayList(entries));
+    public static void show(Window owner, Theme theme, List<AuditEntry> entries) {
+        TableView<AuditEntry> table = new TableView<>(FXCollections.observableArrayList(entries));
 
-        TableColumn<AuditLog.Entry, Instant> at = new TableColumn<>("Time");
+        TableColumn<AuditEntry, Instant> at = new TableColumn<>("Time");
         at.setCellValueFactory(new PropertyValueFactory<>("at"));
         at.setCellFactory(c -> new TableCell<>() {
             @Override
@@ -38,13 +39,13 @@ public final class AuditLogDialog {
             }
         });
         at.setPrefWidth(200);
-        TableColumn<AuditLog.Entry, String> user = new TableColumn<>("User");
+        TableColumn<AuditEntry, String> user = new TableColumn<>("User");
         user.setCellValueFactory(new PropertyValueFactory<>("username"));
         user.setPrefWidth(110);
-        TableColumn<AuditLog.Entry, AuditLog.Action> action = new TableColumn<>("Action");
+        TableColumn<AuditEntry, AuditAction> action = new TableColumn<>("Action");
         action.setCellValueFactory(new PropertyValueFactory<>("action"));
         action.setPrefWidth(150);
-        TableColumn<AuditLog.Entry, String> details = new TableColumn<>("Details");
+        TableColumn<AuditEntry, String> details = new TableColumn<>("Details");
         details.setCellValueFactory(new PropertyValueFactory<>("details"));
         details.setPrefWidth(290);
 

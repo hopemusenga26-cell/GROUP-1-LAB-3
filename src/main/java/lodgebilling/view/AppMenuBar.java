@@ -9,8 +9,8 @@ import javafx.scene.input.KeyCombination;
 import lodgebilling.controller.BillingActions;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.Theme;
-import lodgebilling.security.Permission;
-import lodgebilling.security.Session;
+import lodgebilling.model.security.Permission;
+import lodgebilling.model.security.Session;
 
 import java.util.List;
 import java.util.function.Consumer;

@@ -12,20 +12,27 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import lodgebilling.controller.BillingController;
-import lodgebilling.data.AuditLog;
-import lodgebilling.data.BillRepository;
-import lodgebilling.data.DataException;
-import lodgebilling.data.Database;
-import lodgebilling.data.LegacyReceiptImporter;
-import lodgebilling.data.UserRepository;
-import lodgebilling.service.LodgeService;
+import lodgebilling.dao.AuditLogDao;
+import lodgebilling.dao.BillDao;
+import lodgebilling.dao.DataException;
+import lodgebilling.dao.Database;
+import lodgebilling.dao.LegacyReceiptImporter;
+import lodgebilling.dao.SqliteAuditLogDao;
+import lodgebilling.dao.SqliteBillDao;
+import lodgebilling.dao.SqliteFolioDao;
+import lodgebilling.dao.SqliteReportDao;
+import lodgebilling.dao.SqliteReservationDao;
+import lodgebilling.dao.SqliteRoomDao;
+import lodgebilling.dao.SqliteSettingsDao;
+import lodgebilling.dao.SqliteUserDao;
+import lodgebilling.model.service.LodgeService;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.Theme;
 import lodgebilling.model.User;
-import lodgebilling.security.PasswordHasher;
-import lodgebilling.security.Session;
-import lodgebilling.service.AuthException;
-import lodgebilling.service.AuthService;
+import lodgebilling.model.security.PasswordHasher;
+import lodgebilling.model.security.Session;
+import lodgebilling.model.service.AuthException;
+import lodgebilling.model.service.AuthService;
 import lodgebilling.view.AuthCard;
 import lodgebilling.view.LoginView;
 import lodgebilling.view.SetupView;
@@ -55,8 +62,8 @@ public class LodgeBillingApp extends Application {
     private Scene scene;
     private Database database;
     private AuthService auth;
-    private AuditLog audit;
-    private BillRepository bills;
+    private AuditLogDao audit;
+    private BillDao bills;
     private LodgeService lodge;
     private BillingController current;
     private AuthCard authCard;           // the sign-in or setup screen while it is showing
@@ -76,13 +83,15 @@ public class LodgeBillingApp extends Application {
             return;
         }
         Clock clock = Clock.systemUTC();
-        audit = new AuditLog(database, clock);
-        bills = new BillRepository(database);
-        auth = new AuthService(new UserRepository(database), audit, new PasswordHasher(), clock);
+        audit = new SqliteAuditLogDao(database, clock);
+        bills = new SqliteBillDao(database);
+        auth = new AuthService(new SqliteUserDao(database), audit, new PasswordHasher(), clock);
         // Receipts saved by the older version (receipts.tsv) are copied in once
         LegacyReceiptImporter.importOnce(database, audit, LegacyReceiptImporter.defaultFile());
         // Business dates (arrivals, check-out) use the computer's own time zone
-        lodge = new LodgeService(database, audit, Clock.systemDefaultZone());
+        lodge = new LodgeService(database, new SqliteRoomDao(database), new SqliteReservationDao(database),
+                new SqliteFolioDao(database), new SqliteSettingsDao(database), new SqliteReportDao(database),
+                audit, Clock.systemDefaultZone());
 
         // Open at a comfortable size, but never bigger than the screen (minus the taskbar)
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();

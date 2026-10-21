@@ -15,10 +15,10 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import lodgebilling.controller.BillingActions;
+import lodgebilling.model.AuditEntry;
 import lodgebilling.model.Bill;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.Money;
-import lodgebilling.data.AuditLog;
 
 import java.util.List;
 import java.util.Optional;
@@ -138,7 +138,7 @@ public class Dialogs {
         return ChangePasswordDialog.show(owner, model.themeProperty().get(), forced, change);
     }
 
-    public void showAuditLog(List<AuditLog.Entry> entries) {
+    public void showAuditLog(List<AuditEntry> entries) {
         AuditLogDialog.show(owner, model.themeProperty().get(), entries);
     }
 

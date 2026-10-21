@@ -17,10 +17,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
-import lodgebilling.data.ReportRepository.DailyStat;
+import lodgebilling.controller.PageContext;
+import lodgebilling.model.DailyStat;
 import lodgebilling.model.Money;
-import lodgebilling.service.LodgeService;
-import lodgebilling.util.CsvWriter;
+import lodgebilling.model.service.LodgeService;
+import lodgebilling.controller.CsvWriter;
 import lodgebilling.view.Ui;
 
 import java.io.File;

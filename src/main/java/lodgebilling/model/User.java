@@ -1,6 +1,6 @@
 package lodgebilling.model;
 
-import lodgebilling.security.Role;
+import lodgebilling.model.security.Role;
 
 import java.time.Instant;
 

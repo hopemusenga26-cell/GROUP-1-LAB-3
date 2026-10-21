@@ -1,6 +1,6 @@
 package lodgebilling.view;
 
-import lodgebilling.security.Permission;
+import lodgebilling.model.security.Permission;
 
 /** The screens in the sidebar, in order, with who may see each one. */
 public enum AppPage {

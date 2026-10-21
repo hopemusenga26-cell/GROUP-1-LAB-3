@@ -14,7 +14,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import lodgebilling.model.Theme;
-import lodgebilling.service.UserFacingException;
+import lodgebilling.model.service.UserFacingException;
 
 /**
  * A small pop-up form (label + input rows, an error line, OK and Cancel).

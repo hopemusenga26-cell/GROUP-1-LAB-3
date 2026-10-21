@@ -16,13 +16,14 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import lodgebilling.controller.PageContext;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationStatus;
 import lodgebilling.model.Room;
 import lodgebilling.model.RoomStatus;
 import lodgebilling.model.RoomType;
-import lodgebilling.security.Permission;
+import lodgebilling.model.security.Permission;
 import lodgebilling.view.FormDialog;
 import lodgebilling.view.Ui;
 
@@ -173,7 +174,7 @@ public class RoomsPage implements Page {
             }
             String v = vat.getText().trim();
             if (!v.matches("\\d{1,2}(\\.\\d{1,2})?")) {
-                throw new lodgebilling.service.LodgeException("Enter VAT as a number, e.g. 16.");
+                throw new lodgebilling.model.service.LodgeException("Enter VAT as a number, e.g. 16.");
             }
             ctx.lodge().saveRates(ctx.session(), rates, new BigDecimal(v));
         });
