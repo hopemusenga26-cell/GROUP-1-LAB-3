@@ -9,12 +9,17 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import lodgebilling.controller.PageContext;
 import lodgebilling.model.Bill;
+import lodgebilling.model.FolioCalculator;
 import lodgebilling.model.Money;
+import lodgebilling.model.Payer;
+import lodgebilling.model.PaymentLine;
+import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationForm;
 import lodgebilling.model.ReservationStatus;
 import lodgebilling.model.Room;
 import lodgebilling.model.RoomStatus;
+import lodgebilling.model.security.Permission;
 import lodgebilling.model.service.LodgeService;
 import lodgebilling.view.FormDialog;
 import lodgebilling.view.Ui;
@@ -27,7 +32,8 @@ import java.util.Optional;
 
 /**
  * New booking, walk-in, or edit. The room list only offers rooms free for the
- * chosen dates, and a live estimate shows what the stay will cost.
+ * chosen dates, and a live estimate shows what the stay will cost. A walk-in can
+ * pay in the same window: the amount starts at the estimate.
  */
 public final class ReservationDialog {
 
@@ -70,6 +76,17 @@ public final class ReservationDialog {
         estimate.getStyleClass().add("price-amount");
         estimate.setMaxWidth(260);
         estimate.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        // A walk-in pays as they check in (in full, a deposit, or 0 to pay later)
+        boolean takesPayment = mode == Mode.WALK_IN && ctx.can(Permission.POST_FOLIO);
+        TextField paidNow = new TextField();
+        ComboBox<PaymentMethod> method = new ComboBox<>(FXCollections.observableArrayList(PaymentMethod.values()));
+        boolean[] paidTyped = {false};
+        if (takesPayment) {
+            form.add("Paid now (K)", paidNow);
+            paidNow.setOnKeyTyped(e -> paidTyped[0] = true);   // stop following the estimate once typed in
+            form.add("Method", method);
+            method.setValue(PaymentMethod.CASH);
+        }
         TextArea notes = form.add("Notes", Ui.notesArea());
 
         if (existing != null) {
@@ -107,8 +124,14 @@ public final class ReservationDialog {
                 free.stream().filter(r -> r.id() == selected.id()).findFirst().ifPresent(rooms::setValue);
             }
         };
-        Runnable updateEstimate = () -> estimate.setText(estimate(lodge, existing, rooms.getValue(),
-                arrive.getValue(), leave.getValue()));
+        Runnable updateEstimate = () -> {
+            estimate.setText(estimate(lodge, existing, rooms.getValue(), arrive.getValue(), leave.getValue()));
+            if (takesPayment && !paidTyped[0]) {
+                BigDecimal total = total(lodge, existing, rooms.getValue(), arrive.getValue(), leave.getValue());
+                paidNow.setText(total == null || companyPays.isSelected() ? "" : total.toPlainString());
+            }
+        };
+        companyPays.selectedProperty().addListener((o, a, b) -> updateEstimate.run());
         arrive.valueProperty().addListener((o, a, b) -> {
             if (b != null && leave.getValue() != null && !leave.getValue().isAfter(b)) {
                 leave.setValue(b.plusDays(1));   // keep departure after arrival
@@ -126,9 +149,18 @@ public final class ReservationDialog {
             ReservationForm f = new ReservationForm(guest.getText(), phone.getText(), company.getText(),
                     companyPays.isSelected() && !company.getText().isBlank(), rooms.getValue(),
                     arrive.getValue(), leave.getValue(), notes.getText());
+            PaymentLine payment = null;
+            if (takesPayment && !paidNow.getText().isBlank()) {
+                BigDecimal amount = Ui.amount(paidNow.getText());
+                if (amount.signum() > 0) {
+                    payment = new PaymentLine(f.companyPaysRoom() ? Payer.COMPANY : Payer.GUEST, method.getValue(),
+                            amount, "");
+                }
+            }
+            PaymentLine pay = payment;
             saved[0] = switch (mode) {
                 case BOOK -> lodge.book(ctx.session(), f);
-                case WALK_IN -> lodge.walkIn(ctx.session(), f);
+                case WALK_IN -> lodge.walkIn(ctx.session(), f, pay);
                 case EDIT -> lodge.update(ctx.session(), existing.id(), f);
             };
         });
@@ -136,17 +168,29 @@ public final class ReservationDialog {
     }
 
     private static String estimate(LodgeService lodge, Reservation existing, Room room, LocalDate in, LocalDate out) {
-        if (room == null || in == null || out == null || !out.isAfter(in)) {
+        BigDecimal total = total(lodge, existing, room, in, out);
+        if (total == null) {
             return "-";
         }
         int nights = (int) ChronoUnit.DAYS.between(in, out);
-        BigDecimal rate = existing != null ? existing.nightlyRate() : lodge.rateCard().rateFor(room.type());
         BigDecimal vat = existing != null ? existing.vatPercent() : lodge.rateCard().vatPercent();
-        Bill b = new Bill("", "", room.type(), rate, nights, BigDecimal.ZERO, BigDecimal.ZERO, "", null, "");
-        BigDecimal net = b.getRoomCharge().subtract(b.getDiscount());
-        BigDecimal withVat = Money.scale(net.add(net.multiply(vat).divide(new BigDecimal("100"))));
-        return nights + " night(s) x " + Money.format(rate)
-                + (b.getDiscount().signum() > 0 ? " - " + Bill.discountPercentLabel() + " long-stay discount" : "")
-                + " + " + vat.stripTrailingZeros().toPlainString() + "% VAT = " + Money.format(withVat);
+        return nights + " night(s) x " + Money.format(rate(lodge, existing, room))
+                + (nights >= Bill.DISCOUNT_MIN_NIGHTS ? " - " + Bill.discountPercentLabel() + " long-stay discount" : "")
+                + " + " + vat.stripTrailingZeros().toPlainString() + "% VAT = " + Money.format(total);
+    }
+
+    /** The room nights with discount and VAT, or null until a room and valid dates are chosen. */
+    private static BigDecimal total(LodgeService lodge, Reservation existing, Room room, LocalDate in, LocalDate out) {
+        if (room == null || in == null || out == null || !out.isAfter(in)) {
+            return null;
+        }
+        int nights = (int) ChronoUnit.DAYS.between(in, out);
+        BigDecimal vat = existing != null ? existing.vatPercent() : lodge.rateCard().vatPercent();
+        return FolioCalculator.estimate(rate(lodge, existing, room), nights, vat);
+    }
+
+    /** An existing booking keeps the price it was made at. */
+    private static BigDecimal rate(LodgeService lodge, Reservation existing, Room room) {
+        return existing != null ? existing.nightlyRate() : lodge.rateCard().rateFor(room.type());
     }
 }

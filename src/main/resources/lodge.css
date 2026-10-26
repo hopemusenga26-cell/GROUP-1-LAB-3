@@ -8,33 +8,48 @@
    door plates and key tags) for room numbers, money and dates. JavaFX takes one
    family name per rule (no fallback lists); Styles loads Bahnschrift.
    ".dark" is added to the root by the app.
+   Light is white paper, black ink and grey. Dark is the lodge at night:
+   blue-black, with the brass of its lanterns for the main action only.
+   The dashboard is the one exception to the ledger: its figures are glass
+   over the lodge photo, and its sections are clay (see the end of the file).
    ===================================================================== */
 .root {
-    -desk: #e8ebe6;          /* the window behind the sheet: sidebar, menu, status line */
+    -desk: #e9eaec;          /* the window behind the sheet: sidebar and status line */
     -paper: #ffffff;         /* the working sheet */
-    -paper-soft: #f5f6f3;    /* weekends, table headers, read-only areas */
-    -text: #16202b;          /* register ink */
-    -text-muted: #5a6470;    /* pencil */
-    -title: #16202b;
-    -line: #d6dbd3;          /* rules between sections and rows */
-    -line-soft: #eceeea;
-    -line-strong: #c3c9c0;   /* edges of inputs and buttons */
-    -hover: #f2f4f1;
-    -row-selected: #e1e7ef;
-    -ink: #16202b;           /* the main action, current page, selection bar */
-    -ink-hover: #2a3644;
+    -paper-soft: #f5f6f7;    /* weekends, table headers, read-only areas */
+    -text: #1b1d21;          /* register ink */
+    -text-muted: #5b6068;    /* pencil */
+    -title: #111317;
+    -line: #dcdee2;          /* rules between sections and rows */
+    -line-soft: #eceef0;
+    -line-strong: #c5c9cf;   /* edges of inputs and buttons */
+    -hover: #f1f2f4;
+    -row-selected: #e8eaee;
+    -ink: #15171b;           /* the main action, current page, selection bar */
+    -ink-hover: #2d3138;
     -ink-text: #ffffff;
-    -focus: #16202b;
+    -focus: #15171b;
     -danger: #a3312a;
     -danger-bg: #fbeceb;
-    -popup-shadow: rgba(22,32,43,0.16);
-    -chart-bar: #16202b;
+    -popup-shadow: rgba(20,28,40,0.16);
+    -chart-bar: #2a2e35;
+    -nav-current: -text;     /* the current page's name in the sidebar */
+
+    /* the dashboard's glass and clay */
+    -glass: rgba(255,255,255,0.74);
+    -glass-edge: rgba(255,255,255,0.95);
+    -glass-text-muted: #3c4048;
+    -clay-top: #ffffff;
+    -clay-bottom: #f5f6f8;
+    -clay-edge: rgba(25,35,50,0.08);
+    -clay-shadow: rgba(25,35,55,0.15);
+    -night: #1d3a52;         /* the photo's sky, shown until the photo loads */
 
     /* status: the same meaning on every screen, so staff learn it once */
     -ok: #1d7a4b;      -ok-soft: #e2f1e8;
     -busy: #b0372c;    -busy-soft: #f8e4e1;
     -pending: #8f5b00; -pending-soft: #f7ecd6;
-    -idle: #636d77;    -idle-soft: #eceef0;
+    -idle: #5f6973;    -idle-soft: #eceef0;
     -booked: #2f5a93;  -booked-soft: #e3ebf6;
 
     -fx-font-family: "Segoe UI";
@@ -43,25 +58,35 @@
 }
 
 .root.dark {
-    -desk: #0a0c0f;
-    -paper: #191e24;
-    -paper-soft: #1e242b;
-    -text: #e6eaee;
-    -text-muted: #98a2ac;
-    -title: #f1f4f6;
-    -line: #2a3038;
-    -line-soft: #20252b;
-    -line-strong: #3a424c;
-    -hover: #1d2228;
-    -row-selected: #253141;
-    -ink: #e6eaee;
-    -ink-hover: #ffffff;
-    -ink-text: #0a0c0f;
-    -focus: #e6eaee;
+    -desk: #0c0e12;
+    -paper: #15181d;
+    -paper-soft: #1b1f25;
+    -text: #e9e6df;
+    -text-muted: #a09d96;
+    -title: #f4f1ea;
+    -line: #2a2f37;
+    -line-soft: #1f232a;
+    -line-strong: #3a404a;
+    -hover: #1d2128;
+    -row-selected: #272418;
+    -ink: #cfa75a;           /* lantern brass */
+    -ink-hover: #ddb96e;
+    -ink-text: #15120c;
+    -focus: #d9b265;
     -danger: #f0857b;
     -danger-bg: rgba(240,133,123,0.12);
-    -popup-shadow: rgba(0,0,0,0.5);
-    -chart-bar: #b9c3cd;
+    -popup-shadow: rgba(0,0,0,0.55);
+    -chart-bar: #a8894f;
+    -nav-current: #dcb768;
+
+    -glass: rgba(12,14,18,0.72);
+    -glass-edge: rgba(220,183,104,0.40);
+    -glass-text-muted: #d3cec4;
+    -clay-top: #21252c;
+    -clay-bottom: #1a1d23;
+    -clay-edge: rgba(0,0,0,0.55);
+    -clay-shadow: rgba(0,0,0,0.55);
+    -night: #0f2333;
 
     -ok: #6fcf98;      -ok-soft: rgba(29,122,75,0.28);
     -busy: #f0857b;    -busy-soft: rgba(176,55,44,0.30);
@@ -184,16 +209,7 @@
 .button.compact { -fx-padding: 5 12 5 12; -fx-min-height: 32px; -fx-font-size: 13px; }
 .button.compact:focus-visible { -fx-padding: 4 11 4 11; }
 
-/* ---------- Menu bar and menus ---------- */
-.menu-bar {
-    -fx-background-color: -desk;
-    -fx-padding: 2 8 2 8;
-    -fx-border-color: transparent transparent -line transparent;
-    -fx-border-width: 0 0 1 0;
-}
-.menu-bar .label { -fx-text-fill: -text; }
-.menu-bar .menu-button { -fx-background-radius: 4; -fx-padding: 4 10 4 10; }
-.menu-bar .menu-button:hover, .menu-bar .menu:showing { -fx-background-color: -line-soft; }
+/* ---------- Pop-up lists and context menus ---------- */
 .context-menu, .combo-box-popup > .list-view {
     -fx-background-color: -paper;
     -fx-background-radius: 8;
@@ -216,6 +232,8 @@
     -fx-font-size: 12.5px;
     -fx-padding: 5 8 5 8;
 }
+/* Brass is for actions, so a tooltip at night is plain slate */
+.root.dark .tooltip { -fx-background-color: #2a2f37; -fx-text-fill: -text; }
 
 /* ---------- Messages ---------- */
 /* An inline message box (sign-in and pop-up form errors) */
@@ -334,18 +352,36 @@
 .scroll-pane > .corner { -fx-background-color: transparent; }
 
 /* ---------- Sign-in and first-run screens ---------- */
-/* The left half is the lodge's name on ink; the right half is the form on paper */
-.auth-brand { -fx-background-color: #16202b; -fx-padding: 40 44 40 44; }
-.auth-brand .label { -fx-text-fill: #e6eaee; }
+/* The left half is the lodge at dusk with its name over the pool; the right half is the form.
+   The photo is fitted to the panel's height ("cover" would pin it to the top-left corner).
+   JavaFX paints borders over background images, so a deep gradient bottom border darkens
+   the water under the name; the negative bottom padding cancels the border's width. */
+.auth-brand {
+    -fx-background-color: -night;
+    -fx-background-image: url("images/lodge.jpg");
+    -fx-background-size: auto 100%;
+    -fx-background-position: 50% 50%;
+    -fx-background-repeat: no-repeat;
+    -fx-border-color: transparent transparent linear-gradient(to bottom, rgba(5,9,14,0) 55%, rgba(5,9,14,0.55) 78%, rgba(5,9,14,0.86) 100%) transparent;
+    -fx-border-width: 0 0 340 0;
+    -fx-alignment: bottom-left;
+    -fx-padding: 40 44 -296 44;
+}
+.auth-brand .label { -fx-text-fill: #eef0f2; }
 .auth-wordmark { -fx-font-family: "Bahnschrift"; -fx-font-size: 40px; -fx-text-fill: #ffffff; }
-.auth-date { -fx-font-family: "Bahnschrift"; -fx-font-size: 18px; -fx-text-fill: #b9c3cd; }
-.auth-tagline { -fx-font-size: 13px; -fx-text-fill: #98a2ac; }
-.auth-form-side { -fx-background-color: -paper; -fx-padding: 24; }
+.auth-date { -fx-font-family: "Bahnschrift"; -fx-font-size: 18px; -fx-text-fill: #dfe4ea; }
+.root.dark .auth-date { -fx-text-fill: #e6cc8f; }
+.auth-tagline { -fx-font-size: 13px; -fx-text-fill: #c9d0d8; }
+.auth-form-side { -fx-background-color: -desk; -fx-padding: 24; }
+/* The form is one card of clay */
 .auth-card {
-    -fx-background-color: transparent;
+    -fx-background-color: -clay-edge, linear-gradient(to bottom, -clay-top, -clay-bottom);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 18, 17;
     -fx-border-color: transparent;
-    -fx-padding: 0;
+    -fx-padding: 28;
     -fx-spacing: 8;
+    -fx-effect: dropshadow(gaussian, -clay-shadow, 30, 0, 0, 12);
 }
 .auth-card .card-title { -fx-font-family: "Bahnschrift"; -fx-font-size: 24px; }
 .auth-card .form-label { -fx-padding: 8 0 0 0; }
@@ -389,19 +425,33 @@
 /* The current page: a paper tab joined to the sheet */
 .nav-button:selected, .nav-button:selected:hover {
     -fx-background-color: -paper;
-    -fx-text-fill: -text;
+    -fx-text-fill: -nav-current;
     -fx-font-family: "Segoe UI Semibold";
 }
 .nav-button:focus-visible { -fx-border-color: -focus; -fx-border-width: 2 0 2 2; -fx-padding: 6 14 6 10; }
-.quick-action { -fx-alignment: CENTER-LEFT; }
+/* The quick actions are clay keys: they stand off the desk, and sink a little when pressed */
+.button.quick-action {
+    -fx-alignment: CENTER-LEFT;
+    -fx-background-color: -clay-edge, linear-gradient(to bottom, -clay-top, -clay-bottom);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 10, 9;
+    -fx-border-color: transparent;
+    -fx-padding: 9 16 9 16;
+    -fx-min-height: 40px;
+    -fx-effect: dropshadow(gaussian, -clay-shadow, 12, 0, 0, 4);
+}
+.button.quick-action:hover { -fx-background-color: -clay-edge, -clay-top; }
+.button.quick-action:pressed { -fx-effect: dropshadow(gaussian, -clay-shadow, 4, 0, 0, 1); }
+.button.quick-action:focus-visible { -fx-border-color: -focus; -fx-border-width: 2; -fx-border-radius: 10; -fx-padding: 7 14 7 14; }
 /* New booking: the one ink button in the sidebar (not a default button, so Enter stays with the page) */
 .button.quick-primary { -fx-background-color: -ink; -fx-border-color: -ink; -fx-text-fill: -ink-text; }
 .button.quick-primary:hover { -fx-background-color: -ink-hover; -fx-border-color: -ink-hover; }
 .button.quick-primary:focus-visible {
     -fx-background-color: -ink, -desk, -ink;
     -fx-background-insets: 0, 2, 3;
+    -fx-background-radius: 10, 8, 7;
     -fx-border-color: transparent;
-    -fx-padding: 7 16 7 16;
+    -fx-padding: 9 16 9 16;
 }
 
 /* ---------- Status chips: small tags in the status colours ---------- */
@@ -507,3 +557,54 @@
 
 /* The one-time password shown to an admin: big and monospaced, so 4 and 9 are easy to tell apart */
 .temp-password { -fx-font-family: "Consolas"; -fx-font-size: 18px; -fx-font-weight: bold; }
+
+/* ---------- Dashboard: the day at a glance ---------- */
+/* The one page that is not a ledger. The figures are glass over the lodge photo and the
+   sections below them are clay. DashboardPage adds "dashboard" and "metric-strip". */
+.dashboard { -fx-spacing: 18; }
+
+/* The photo, fitted to the strip's width so the roof and lanterns show. Images are not
+   clipped by a background radius, so a border in the paper's colour rounds the corners. */
+.metric-strip {
+    -fx-background-color: -night;
+    -fx-background-image: url("images/lodge.jpg");
+    -fx-background-size: 100% auto;
+    -fx-background-position: 50% 47%;
+    -fx-background-repeat: no-repeat;
+    -fx-border-color: -paper;
+    -fx-border-width: 14;
+    -fx-border-insets: -14;
+    -fx-border-radius: 32;
+    -fx-padding: 40 22 22 22;
+    -fx-spacing: 16;
+}
+
+/* Glass: a see-through pane with a bright top edge */
+.dashboard .card.metric {
+    -fx-background-color: linear-gradient(to bottom, -glass-edge, transparent), -glass;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 14, 13;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 14 18 14 18;
+    -fx-min-width: 160;
+    -fx-effect: dropshadow(gaussian, rgba(5,15,30,0.35), 24, 0, 0, 8);
+}
+.root.dark .dashboard .metric-value { -fx-text-fill: -nav-current; }
+.dashboard .metric-overdue .metric-value, .root.dark .dashboard .metric-overdue .metric-value { -fx-text-fill: -busy; }
+.dashboard .metric-caption { -fx-text-fill: -glass-text-muted; -fx-font-family: "Segoe UI Semibold"; }
+
+/* Clay: arrivals, departures, rooms and recent activity */
+.dashboard .card {
+    -fx-background-color: -clay-edge, linear-gradient(to bottom, -clay-top, -clay-bottom);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 18, 17;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 16 18 18 18;
+    -fx-effect: dropshadow(gaussian, -clay-shadow, 28, 0, 0, 10);
+}
+.dashboard .card .table-view,
+.dashboard .card .table-view:focused,
+.dashboard .card .table-view .column-header-background { -fx-background-color: transparent; }
+.dashboard .chip { -fx-padding: 5 12 5 12; -fx-background-radius: 12; }

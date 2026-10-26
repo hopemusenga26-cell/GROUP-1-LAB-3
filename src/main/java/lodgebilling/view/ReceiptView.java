@@ -2,6 +2,10 @@ package lodgebilling.view;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.print.PageLayout;
+import javafx.print.PrinterJob;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
@@ -12,8 +16,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Scale;
+import javafx.stage.Window;
 import lodgebilling.model.Bill;
 import lodgebilling.model.Money;
+import lodgebilling.model.Theme;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
@@ -58,6 +65,50 @@ public class ReceiptView extends VBox {
         getChildren().addAll(edge(true), body, edge(false));
     }
 
+    /** Sends a receipt to a printer the user picks. Returns false if cancelled or it failed. */
+    public static boolean print(Window owner, Theme theme, Bill bill) {
+        PrinterJob job = PrinterJob.createPrinterJob();
+        if (job == null) {
+            Ui.info(owner, theme, "Could not print", "No printer is available.");
+            return false;
+        }
+        try {
+            if (!job.showPrintDialog(owner)) {
+                return false;
+            }
+            ReceiptView receipt = new ReceiptView(bill);
+            receipt.setEffect(null);   // the on-screen drop shadow would print as a grey smudge
+            // A scene is needed for the CSS to apply. It is never shown, so it has no size:
+            // a StackPane here would be 0 x 0 and centre the receipt on its corner, pushing
+            // half of it off the page. A Group never resizes or centres its children.
+            Scene scene = new Scene(new Group(receipt));
+            scene.getStylesheets().add(Styles.stylesheet());
+            receipt.applyCss();
+            receipt.autosize();        // its preferred size, about 340 x 584
+            receipt.layout();
+
+            // Shrink the receipt to fit the printable area if it is too wide or too tall
+            PageLayout page = job.getJobSettings().getPageLayout();
+            double scale = Math.min(page.getPrintableWidth() / receipt.getWidth(),
+                    page.getPrintableHeight() / receipt.getHeight());
+            if (scale > 0 && scale < 1) {
+                receipt.getTransforms().add(new Scale(scale, scale));
+            }
+
+            if (job.printPage(receipt)) {
+                job.endJob();
+                return true;
+            }
+            Ui.info(owner, theme, "Could not print", "Printing failed.");
+            return false;
+        } finally {
+            if (job.getJobStatus() == PrinterJob.JobStatus.PRINTING
+                    || job.getJobStatus() == PrinterJob.JobStatus.NOT_STARTED) {
+                job.cancelJob();
+            }
+        }
+    }
+
     // ---------- Sections ----------
 
     private Node header() {
@@ -80,6 +131,10 @@ public class ReceiptView extends VBox {
         }
         if (bill.getExtras().signum() > 0) {
             box.getChildren().add(line("Extras", Money.format(bill.getExtras())));
+        }
+        if (bill.getVat().signum() > 0) {
+            box.getChildren().add(line("VAT (" + bill.getVatPercent().stripTrailingZeros().toPlainString() + "%)",
+                    Money.format(bill.getVat())));
         }
         return box;
     }

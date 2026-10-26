@@ -1,34 +1,29 @@
 package lodgebilling.view;
 
-import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import lodgebilling.controller.BillingActions;
+import lodgebilling.controller.PageContext;
 import lodgebilling.dao.AuditLogDao;
-import lodgebilling.model.AuditEntry;
 import lodgebilling.model.Bill;
-import lodgebilling.model.BillFormData;
 import lodgebilling.model.BillingModel;
-import lodgebilling.model.FormField;
 import lodgebilling.model.security.Permission;
 import lodgebilling.model.service.AuthService;
 import lodgebilling.model.service.LodgeService;
 import lodgebilling.view.pages.DashboardPage;
 import lodgebilling.view.pages.Page;
-import lodgebilling.controller.PageContext;
 import lodgebilling.view.pages.ReportsPage;
 import lodgebilling.view.pages.ReservationDialog;
 import lodgebilling.view.pages.RoomsPage;
@@ -39,24 +34,25 @@ import lodgebilling.view.pages.TapeChartPage;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * The V in MVC: the whole window. A sidebar on the left switches between pages,
- * the header and status bar stay put. The Receipts page is the original
- * billing screen; the other pages live in view.pages.
+ * the header and status bar stay put. There is no menu bar: every action is a
+ * button where it applies, and the keyboard shortcuts are set on the scene.
  */
 public class MainView extends BorderPane {
 
     private static final DateTimeFormatter SIDEBAR_DATE = DateTimeFormatter.ofPattern("EEEE d MMMM");
 
-    private final BillFormView form;
+    private final BillingModel model;
+    private final BillingActions actions;
     private final BillTableView table;
     private final AppToolBar toolBar;
-    private final PricePanel pricePanel;
     private final Dialogs dialogs;
-    private final ScrollPane billingScroll;
+    private final VBox receiptsContent;
     private final AppHeader header;
     private final PageContext pageContext;
     private final StackPane pageArea = new StackPane();
@@ -64,29 +60,26 @@ public class MainView extends BorderPane {
     private final Map<AppPage, Page> pages = new EnumMap<>(AppPage.class);
     private final Map<AppPage, ToggleButton> navButtons = new EnumMap<>(AppPage.class);
     private final ToggleGroup nav = new ToggleGroup();
+    private final List<AppPage> visible = new ArrayList<>();
     private AppPage current;
-    // Kept so it can be removed again at logout (the Scene outlives this view)
+    // Kept so they can be removed again at logout (the Scene outlives this view)
     private ChangeListener<Node> focusWatcher;
+    private final Map<KeyCombination, Runnable> shortcuts = new LinkedHashMap<>();
 
     public MainView(BillingModel model, BillingActions actions, Stage stage, LodgeService lodge, AuditLogDao audit,
                     AuthService auth) {
-        this.form = new BillFormView(actions, model.statusProperty());
+        this.model = model;
+        this.actions = actions;
         this.table = new BillTableView(model.bills(), actions::viewReceipt, actions::deleteSelected);
         this.toolBar = new AppToolBar(actions, model);
-        this.pricePanel = new PricePanel(lodge.rateCard());
         this.dialogs = new Dialogs(stage, model, actions);
         this.header = new AppHeader(model, actions);
         this.pageContext = new PageContext(stage, model, lodge, audit, auth);
         pageContext.setRefreshCurrentPage(this::refreshCurrent);
         toolBar.disableWhen(table.getSelectionModel().selectedItemProperty().isNull());
-
-        billingScroll = new ScrollPane(buildBillingContent());
-        billingScroll.setFitToWidth(true);
-        billingScroll.setFitToHeight(true);
-        billingScroll.getStyleClass().add("main-scroll");
+        receiptsContent = buildReceiptsContent();
 
         // Only the pages this role may use are created and shown
-        List<AppPage> visible = new ArrayList<>();
         for (AppPage p : AppPage.values()) {
             if (model.session().has(p.permission())) {
                 visible.add(p);
@@ -94,8 +87,7 @@ public class MainView extends BorderPane {
             }
         }
 
-        setTop(new AppMenuBar(actions, model, visible, this::showPage));
-        setLeft(buildSidebar(visible));
+        setLeft(buildSidebar());
         setBottom(new StatusBar(model.statusProperty()));
 
         // The header names the page, so it sits over the page rather than across the sidebar.
@@ -122,14 +114,17 @@ public class MainView extends BorderPane {
             case ROOMS -> new RoomsPage(pageContext);
             case REPORTS -> new ReportsPage(pageContext);
             case STAFF -> new StaffPage(pageContext);
-            case QUICK_BILLS -> new Page() {
-                @Override public Node node() { return billingScroll; }
-                @Override public void refresh() { pricePanel.refresh(); }
+            case RECEIPTS -> new Page() {
+                @Override public Node node() { return receiptsContent; }
+                // Bookings and walk-ins are re-read, so their latest payments show
+                @Override public void refresh() {
+                    pageContext.attempt(() -> model.showStays(pageContext.lodge().stayReceipts()));
+                }
             };
         };
     }
 
-    private VBox buildSidebar(List<AppPage> visible) {
+    private VBox buildSidebar() {
         VBox side = new VBox(4);
         side.getStyleClass().add("sidebar");
         Label name = new Label("Lodge Billing");
@@ -194,27 +189,20 @@ public class MainView extends BorderPane {
         }
     }
 
-    private void showBilling() {
-        if (current != AppPage.QUICK_BILLS) {
-            showPage(AppPage.QUICK_BILLS);
-        }
-    }
-
-    private VBox buildBillingContent() {
-        HBox.setHgrow(form, Priority.ALWAYS);
-        HBox formAndPrices = new HBox(16, form, pricePanel);
-
-        // The receipt buttons sit on the table they act on
+    /** Every receipt, quick bills and stays alike, with the buttons that act on the selected one. */
+    private VBox buildReceiptsContent() {
         VBox.setVgrow(table, Priority.ALWAYS);
-        VBox tableCard = Ui.card("Saved receipts", List.of(toolBar), table);
+        VBox tableCard = Ui.card("Receipts", List.of(toolBar), table);
         VBox.setVgrow(tableCard, Priority.ALWAYS);
-
-        VBox content = new VBox(12, formAndPrices, tableCard);
+        Label hint = new Label("Walk-ins and bookings appear here as BK receipts. "
+                + "Use Walk-in on the left to bill a new guest.");
+        hint.getStyleClass().add("hint");
+        VBox content = new VBox(12, hint, tableCard);
         content.setPadding(new Insets(16, 20, 16, 20));
         return content;
     }
 
-    /** Call once the scene exists: focus behaviour that needs the whole scene. */
+    /** Call once the scene exists: keyboard shortcuts and focus behaviour that need the whole scene. */
     public void install(Scene scene) {
         // Deselect the row when focus leaves the table, except when it goes to
         // a button that needs the selection (View receipt / Delete)
@@ -224,12 +212,31 @@ public class MainView extends BorderPane {
             }
         };
         scene.focusOwnerProperty().addListener(focusWatcher);
-        if (current == AppPage.QUICK_BILLS) {
-            Platform.runLater(() -> {
-                form.focus(FormField.NAME);
-                billingScroll.setVvalue(0);
-            });
+
+        // Ctrl+1, Ctrl+2... jump between pages without the mouse
+        for (int i = 0; i < visible.size() && i < 9; i++) {
+            AppPage p = visible.get(i);
+            shortcuts.put(KeyCombination.keyCombination("Shortcut+" + (i + 1)), () -> showPage(p));
         }
+        shortcuts.put(KeyCombination.keyCombination("Shortcut+T"), actions::toggleTheme);
+        shortcuts.put(KeyCombination.keyCombination("Shortcut+L"), actions::logout);
+        shortcuts.put(KeyCombination.keyCombination("Shortcut+Q"), actions::exit);
+        if (pages.containsKey(AppPage.RECEIPTS)) {
+            shortcuts.put(KeyCombination.keyCombination("Shortcut+R"), onReceipts(actions::viewReceipt));
+            shortcuts.put(KeyCombination.keyCombination("Shortcut+P"), onReceipts(actions::printReceipt));
+            shortcuts.put(KeyCombination.keyCombination("Shortcut+Y"), onReceipts(actions::recordPayment));
+            shortcuts.put(KeyCombination.keyCombination("Shortcut+D"), onReceipts(actions::deleteSelected));
+        }
+        scene.getAccelerators().putAll(shortcuts);
+    }
+
+    /** A receipts shortcut does nothing on other pages, where there is no receipt to act on. */
+    private Runnable onReceipts(Runnable action) {
+        return () -> {
+            if (current == AppPage.RECEIPTS) {
+                action.run();
+            }
+        };
     }
 
     /** Call before the scene switches to another screen (logout). */
@@ -238,24 +245,21 @@ public class MainView extends BorderPane {
             scene.focusOwnerProperty().removeListener(focusWatcher);
             focusWatcher = null;
         }
+        shortcuts.keySet().forEach(scene.getAccelerators()::remove);
+        shortcuts.clear();
     }
 
     // ---------- What the controller can ask of the screen ----------
 
-    public BillFormData readForm()          { return form.read(); }
-    public void clearForm()                 { showBilling(); form.clear(); }
-    public void focusField(FormField field) { showBilling(); form.focus(field); }
-    public Bill selectedBill()              { return current == AppPage.QUICK_BILLS ? table.selectedBill() : null; }
+    public PageContext pageContext()        { return pageContext; }
+    public Bill selectedBill()              { return current == AppPage.RECEIPTS ? table.selectedBill() : null; }
     public void clearSelection()            { table.clearSelection(); }
-    public void focusTable()                { showBilling(); table.requestFocus(); }
-    public void scrollToBill(Bill bill)     { table.scrollTo(bill); }
+    public void focusTable()                { showPage(AppPage.RECEIPTS); table.requestFocus(); }
+    public void selectBill(Bill bill)       { table.getSelectionModel().select(bill); table.scrollTo(bill); }
 
     public void showReceipt(Bill bill)      { dialogs.showReceipt(bill); }
     public boolean printReceipt(Bill bill)  { return dialogs.printReceipt(bill); }
     public boolean confirmDelete(Bill bill) { return dialogs.confirmDelete(bill); }
-    public void showAbout()                 { dialogs.showAbout(); }
-    public void manageUsers()               { showPage(AppPage.STAFF); }
-    public void showAuditLog(List<AuditEntry> entries) { dialogs.showAuditLog(entries); }
     public boolean changePassword(boolean forced, ChangePasswordDialog.Change change) {
         return dialogs.changePassword(forced, change);
     }

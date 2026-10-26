@@ -15,15 +15,17 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /** SQL for reservations. Every read joins the room, so callers get the room number and type too. */
 public class SqliteReservationDao implements ReservationDao {
 
     private static final String SELECT = """
             SELECT r.id, r.guest_name, r.guest_phone, r.company, r.company_pays_room,
-                   r.check_in, r.check_out, r.status, r.nightly_rate, r.vat_percent, r.notes, r.created_by,
+                   r.check_in, r.check_out, r.status, r.nightly_rate, r.vat_percent, r.notes, r.created_by, r.created_at,
                    m.id AS room_id, m.number AS room_number, m.room_type, m.status AS room_status
             FROM reservations r JOIN rooms m ON m.id = r.room_id
             """;
@@ -69,6 +71,26 @@ public class SqliteReservationDao implements ReservationDao {
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
+        } catch (SQLException e) {
+            throw new DataException("Could not check room availability", e);
+        }
+    }
+
+    @Override
+    public Set<Long> takenRoomIds(LocalDate checkIn, LocalDate checkOut, long ignoreReservationId) {
+        String sql = "SELECT DISTINCT room_id FROM reservations WHERE id <> ? "
+                + "AND status IN ('BOOKED', 'CHECKED_IN') AND check_in < ? AND check_out > ?";
+        Set<Long> taken = new HashSet<>();
+        try (PreparedStatement ps = db.prepareStatement(sql)) {
+            ps.setLong(1, ignoreReservationId);
+            ps.setString(2, checkOut.toString());
+            ps.setString(3, checkIn.toString());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    taken.add(rs.getLong(1));
+                }
+            }
+            return taken;
         } catch (SQLException e) {
             throw new DataException("Could not check room availability", e);
         }
@@ -160,6 +182,7 @@ public class SqliteReservationDao implements ReservationDao {
                 rs.getString("company"), rs.getInt("company_pays_room") == 1, room,
                 LocalDate.parse(rs.getString("check_in")), LocalDate.parse(rs.getString("check_out")),
                 ReservationStatus.valueOf(rs.getString("status")), new BigDecimal(rs.getString("nightly_rate")),
-                new BigDecimal(rs.getString("vat_percent")), rs.getString("notes"), rs.getString("created_by"));
+                new BigDecimal(rs.getString("vat_percent")), rs.getString("notes"), rs.getString("created_by"),
+                LocalDateTime.parse(rs.getString("created_at")));
     }
 }

@@ -13,9 +13,11 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lodgebilling.controller.PageContext;
 import lodgebilling.model.User;
+import lodgebilling.model.security.Permission;
 import lodgebilling.model.security.Role;
 import lodgebilling.model.service.AuthException;
 import lodgebilling.model.service.AuthService;
+import lodgebilling.view.AuditLogDialog;
 import lodgebilling.view.FormDialog;
 import lodgebilling.view.TemporaryPasswordDialog;
 import lodgebilling.view.Ui;
@@ -33,6 +35,8 @@ import java.util.List;
  * page being hidden from other roles is convenience, not the security itself.
  */
 public class StaffPage implements Page {
+
+    private static final int AUDIT_ROWS_SHOWN = 500;
 
     static final String ROLES_EXPLAINED = "Housekeeping: room status only. "
             + "Front desk: bookings, check-in/out, folios and receipts. "
@@ -54,6 +58,11 @@ public class StaffPage implements Page {
         Button add = Ui.compact("Add staff member", this::addUser);
         toggle.getStyleClass().add("danger");
         HBox actions = Ui.row(add, Ui.spacer(), reset, role, toggle);
+        if (ctx.can(Permission.VIEW_AUDIT_LOG)) {
+            // Who did what and when: sign-ins, payments, voids, account changes
+            actions.getChildren().add(Ui.compact("Audit log", () -> ctx.attempt(() -> AuditLogDialog.show(
+                    ctx.owner(), ctx.theme(), ctx.audit().latest(AUDIT_ROWS_SHOWN)))));
+        }
 
         // The buttons only make sense with a row selected, and Disable/Enable follows the row
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, now) -> updateButtons(now));

@@ -23,10 +23,17 @@ public final class FolioCalculator {
 
     private FolioCalculator() { }
 
+    /** What a stay will cost before any extras: room nights less the discount, plus VAT. */
+    public static BigDecimal estimate(BigDecimal nightlyRate, int nights, BigDecimal vatPercent) {
+        BigDecimal charge = Bill.roomCharge(nightlyRate, nights);
+        BigDecimal net = charge.subtract(Bill.discount(charge, nights));
+        return Money.scale(net.add(Money.scale(net.multiply(vatPercent).divide(HUNDRED))));
+    }
+
     public static FolioSummary summarise(Reservation stay, List<FolioEntry> entries) {
         // Room nights, with the same discount rule as the quick bill
-        Bill roomOnly = new Bill("", stay.guestName(), stay.room().type(), stay.nightlyRate(),
-                stay.nights(), BigDecimal.ZERO, BigDecimal.ZERO, "", null, "");
+        BigDecimal roomCharge = Bill.roomCharge(stay.nightlyRate(), stay.nights());
+        BigDecimal discount = Bill.discount(roomCharge, stay.nights());
         Payer roomPayer = stay.companyPaysRoom() && stay.hasCompany() ? Payer.COMPANY : Payer.GUEST;
 
         Map<Payer, BigDecimal> charged = new EnumMap<>(Payer.class);
@@ -35,7 +42,7 @@ public final class FolioCalculator {
             charged.put(p, BigDecimal.ZERO);
             paid.put(p, BigDecimal.ZERO);
         }
-        BigDecimal roomNet = roomOnly.getRoomCharge().subtract(roomOnly.getDiscount());
+        BigDecimal roomNet = roomCharge.subtract(discount);
         charged.merge(roomPayer, roomNet, BigDecimal::add);
 
         BigDecimal extras = BigDecimal.ZERO;
@@ -71,7 +78,7 @@ public final class FolioCalculator {
 
         BigDecimal subtotal = Money.scale(roomNet.add(extras));
         BigDecimal total = subtotal.add(vatTotal);
-        return new FolioSummary(roomOnly.getRoomCharge(), roomOnly.getDiscount(), Money.scale(extras),
+        return new FolioSummary(roomCharge, discount, Money.scale(extras),
                 subtotal, stay.vatPercent(), vatTotal, total, paidTotal, total.subtract(paidTotal), lines);
     }
 }

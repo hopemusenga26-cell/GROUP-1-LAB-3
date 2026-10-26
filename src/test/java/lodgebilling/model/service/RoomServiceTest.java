@@ -1,6 +1,7 @@
 package lodgebilling.model.service;
 
 import lodgebilling.dao.Database;
+import lodgebilling.model.ReservationForm;
 import lodgebilling.model.Room;
 import lodgebilling.model.RoomStatus;
 import lodgebilling.model.RoomType;
@@ -15,12 +16,14 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.EnumMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Rooms, housekeeping and prices: who may change what, and the rules. */
 class RoomServiceTest {
@@ -76,6 +79,29 @@ class RoomServiceTest {
         assertEquals(10, lodge.rooms().size());
         assertThrows(LodgeException.class, () -> lodge.addRoom(ADMIN, "105", RoomType.DELUXE));
         assertThrows(LodgeException.class, () -> lodge.addRoom(ADMIN, "1 0 5", RoomType.DELUXE));
+    }
+
+    @Test
+    void anAdminCanRenumberARoomAndChangeItsType() throws LodgeException {
+        assertThrows(AccessDeniedException.class, () -> lodge.updateRoom(DESK, room("101"), "105", RoomType.DELUXE));
+        lodge.updateRoom(ADMIN, room("101"), "105", RoomType.DELUXE);
+        assertEquals(RoomType.DELUXE, room("105").type());
+        assertTrue(lodge.rooms().stream().noneMatch(r -> r.number().equals("101")));
+        // Keeping its own number is fine; taking another room's is not
+        lodge.updateRoom(ADMIN, room("105"), "105", RoomType.FAMILY);
+        assertThrows(LodgeException.class, () -> lodge.updateRoom(ADMIN, room("105"), "102", RoomType.FAMILY));
+    }
+
+    @Test
+    void onlyARoomThatWasNeverBookedCanBeDeleted() throws LodgeException {
+        assertThrows(AccessDeniedException.class, () -> lodge.deleteRoom(DESK, room("102")));
+        lodge.deleteRoom(ADMIN, room("102"));
+        assertEquals(8, lodge.rooms().size());
+
+        lodge.book(DESK, new ReservationForm("Ann Banda", "", "", false, room("103"),
+                LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 22), ""));
+        assertThrows(LodgeException.class, () -> lodge.deleteRoom(ADMIN, room("103")));
+        assertEquals(8, lodge.rooms().size());
     }
 
     @Test

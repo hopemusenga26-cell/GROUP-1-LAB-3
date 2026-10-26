@@ -2,28 +2,21 @@ package lodgebilling.view;
 
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
-import javafx.print.PageLayout;
-import javafx.print.PrinterJob;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import lodgebilling.controller.BillingActions;
-import lodgebilling.model.AuditEntry;
 import lodgebilling.model.Bill;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.Money;
 
-import java.util.List;
 import java.util.Optional;
 
-/** The pop-up windows (receipt, delete confirmation, about), all owned by the main window. */
+/** The pop-up windows of the receipts list (receipt, delete confirmation, password), owned by the main window. */
 public class Dialogs {
 
     private final Stage owner;
@@ -65,51 +58,7 @@ public class Dialogs {
 
     /** Sends the receipt to a printer the user picks. Returns false if cancelled or it failed. */
     public boolean printReceipt(Bill bill) {
-        PrinterJob job = PrinterJob.createPrinterJob();
-        if (job == null) {
-            return fail("No printer is available.");
-        }
-        try {
-            if (!job.showPrintDialog(owner)) {
-                return false;
-            }
-            ReceiptView receipt = new ReceiptView(bill);
-            receipt.setEffect(null);   // the on-screen drop shadow would print as a grey smudge
-            // A scene is needed for the CSS to apply. It is never shown, so it has no size:
-            // a StackPane here would be 0 x 0 and centre the receipt on its corner, pushing
-            // half of it off the page. A Group never resizes or centres its children.
-            Scene scene = new Scene(new Group(receipt));
-            scene.getStylesheets().add(Styles.stylesheet());
-            receipt.applyCss();
-            receipt.autosize();        // its preferred size, 340 x 584
-            receipt.layout();
-
-            // Shrink the receipt to fit the printable area if it is too wide or too tall
-            PageLayout page = job.getJobSettings().getPageLayout();
-            double scale = Math.min(page.getPrintableWidth() / receipt.getWidth(),
-                    page.getPrintableHeight() / receipt.getHeight());
-            if (scale > 0 && scale < 1) {
-                receipt.getTransforms().add(new Scale(scale, scale));
-            }
-
-            if (job.printPage(receipt)) {
-                job.endJob();
-                return true;
-            }
-            return fail("Printing failed.");
-        } finally {
-            if (job.getJobStatus() == PrinterJob.JobStatus.PRINTING
-                    || job.getJobStatus() == PrinterJob.JobStatus.NOT_STARTED) {
-                job.cancelJob();
-            }
-        }
-    }
-
-    private boolean fail(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, message);
-        alert.setHeaderText("Could not print");
-        show(alert);
-        return false;
+        return ReceiptView.print(owner, model.themeProperty().get(), bill);
     }
 
     /** Asks the user to confirm; true only if they chose Delete. */
@@ -136,23 +85,6 @@ public class Dialogs {
     /** @return true if the password was changed */
     public boolean changePassword(boolean forced, ChangePasswordDialog.Change change) {
         return ChangePasswordDialog.show(owner, model.themeProperty().get(), forced, change);
-    }
-
-    public void showAuditLog(List<AuditEntry> entries) {
-        AuditLogDialog.show(owner, model.themeProperty().get(), entries);
-    }
-
-    public void showAbout() {
-        Alert about = new Alert(Alert.AlertType.INFORMATION);
-        about.setTitle("About");
-        about.setHeaderText("Lodge Billing");
-        about.setContentText("Lodge Billing runs the front desk: bookings and walk-ins, the tape chart, guest folios "
-                + "with split bills and VAT, room housekeeping, walk-in receipts and reports.\n\n"
-                + "Housekeeping: room status only. Front desk: bookings, folios, receipts. "
-                + "Admin: also voids, forced check-out, prices, reports, users and the audit log.\n\n"
-                + "Signed in as " + model.session().user().fullName()
-                + " (" + model.session().user().role().getLabel() + ").");
-        show(about);
     }
 
     /** Dialogs are separate windows, so they need the stylesheet and current theme too. */

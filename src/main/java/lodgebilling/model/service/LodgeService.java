@@ -2,6 +2,7 @@ package lodgebilling.model.service;
 
 import lodgebilling.dao.AuditLogDao;
 import lodgebilling.model.AuditAction;
+import lodgebilling.model.Bill;
 import lodgebilling.dao.Database;
 import lodgebilling.dao.FolioDao;
 import lodgebilling.dao.ReportDao;
@@ -16,6 +17,7 @@ import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.Money;
 import lodgebilling.model.Payer;
+import lodgebilling.model.PaymentLine;
 import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.RateCard;
 import lodgebilling.model.Reservation;
@@ -33,9 +35,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * The front-desk rules: rooms, bookings, check-in/out and guest folios.
@@ -143,6 +147,46 @@ public class LodgeService {
 
     public Room addRoom(Session session, String number, RoomType type) throws LodgeException {
         session.require(Permission.MANAGE_ROOMS);
+        String n = roomNumber(number, type);
+        if (rooms.numberExists(n)) {
+            throw new LodgeException("Room " + n + " already exists.");
+        }
+        Room room = rooms.insert(n, type);
+        audit.record(session.username(), AuditAction.ROOM_ADDED, n + " (" + type + ")");
+        return room;
+    }
+
+    /** Renumbers a room or changes its type. Bookings keep the price they were made at. */
+    public void updateRoom(Session session, Room room, String number, RoomType type) throws LodgeException {
+        session.require(Permission.MANAGE_ROOMS);
+        Room current = rooms.findById(room.id()).orElseThrow(() -> new LodgeException("That room no longer exists."));
+        String n = roomNumber(number, type);
+        if (!n.equals(current.number()) && rooms.numberExists(n)) {
+            throw new LodgeException("Room " + n + " already exists.");
+        }
+        rooms.update(current.id(), n, type);
+        audit.record(session.username(), AuditAction.ROOM_UPDATED,
+                current.number() + " (" + current.type() + ") -> " + n + " (" + type + ")");
+    }
+
+    /**
+     * Removes a room that was never booked, e.g. one added by mistake. A room with bookings
+     * is part of the lodge's history (folios and receipts name it), so it can only be put
+     * under maintenance, which keeps it out of new bookings.
+     */
+    public void deleteRoom(Session session, Room room) throws LodgeException {
+        session.require(Permission.MANAGE_ROOMS);
+        Room current = rooms.findById(room.id()).orElseThrow(() -> new LodgeException("That room no longer exists."));
+        if (rooms.hasBookings(current.id())) {
+            throw new LodgeException("Room " + current.number() + " has bookings on record, so it cannot be deleted. "
+                    + "Mark it Maintenance to keep it out of new bookings.");
+        }
+        rooms.delete(current.id());
+        audit.record(session.username(), AuditAction.ROOM_DELETED, current.number() + " (" + current.type() + ")");
+    }
+
+    /** A typed room number, checked; the type must be chosen too. */
+    private static String roomNumber(String number, RoomType type) throws LodgeException {
         String n = number == null ? "" : number.trim();
         if (!n.matches("[A-Za-z0-9\\-]{1,10}")) {
             throw new LodgeException("Room numbers are 1 to 10 letters, digits or hyphens (e.g. 104 or A-2).");
@@ -150,12 +194,7 @@ public class LodgeService {
         if (type == null) {
             throw new LodgeException("Choose a room type.");
         }
-        if (rooms.numberExists(n)) {
-            throw new LodgeException("Room " + n + " already exists.");
-        }
-        Room room = rooms.insert(n, type);
-        audit.record(session.username(), AuditAction.ROOM_ADDED, n + " (" + type + ")");
-        return room;
+        return n;
     }
 
     /** Housekeeping: Available / Dirty / Maintenance. Occupied is set only by check-in. */
@@ -199,11 +238,10 @@ public class LodgeService {
         }
         long keepRoomId = ignoreReservationId == 0 ? -1
                 : reservations.findById(ignoreReservationId).map(res -> res.room().id()).orElse(-1L);
+        Set<Long> taken = reservations.takenRoomIds(checkIn, checkOut, ignoreReservationId);
         for (Room r : rooms.findAll()) {
-            if (r.status() == RoomStatus.MAINTENANCE && r.id() != keepRoomId) {
-                continue;
-            }
-            if (!reservations.roomTaken(r.id(), checkIn, checkOut, ignoreReservationId)) {
+            boolean usable = r.status() != RoomStatus.MAINTENANCE || r.id() == keepRoomId;
+            if (usable && !taken.contains(r.id())) {
                 free.add(r);
             }
         }
@@ -228,14 +266,33 @@ public class LodgeService {
 
     /** A guest arriving without a booking: book from today and check in straight away. */
     public Reservation walkIn(Session session, ReservationForm form) throws LodgeException {
+        return walkIn(session, form, null);
+    }
+
+    /**
+     * A walk-in who pays now (in full or a deposit). The booking, the check-in and the
+     * payment are saved together: if any of them is refused, none of them is kept.
+     *
+     * @param payment what the guest pays now, or null if nothing yet
+     */
+    public Reservation walkIn(Session session, ReservationForm form, PaymentLine payment) throws LodgeException {
         session.require(Permission.MANAGE_RESERVATIONS);
+        if (payment != null) {
+            session.require(Permission.POST_FOLIO);
+        }
         ReservationForm f = clean(form);
         if (!today().equals(f.checkIn())) {
             throw new LodgeException("A walk-in starts today.");
         }
         checkRoomReady(f.room());
-        Reservation booked = book(session, f);
-        return checkIn(session, booked.id());
+        return atomically(() -> {
+            Reservation in = checkIn(session, book(session, f).id());
+            if (payment != null) {
+                recordPayment(session, in.id(), payment.method(), payment.amount(), payment.payer(),
+                        payment.reference());
+            }
+            return in;
+        });
     }
 
     /**
@@ -322,11 +379,8 @@ public class LodgeService {
         if (r.status() != ReservationStatus.CHECKED_IN) {
             throw new LodgeException("Only a guest who is in house can be checked out.");
         }
-        // Leaving before the booked date: bill only the nights used (at least one)
-        LocalDate leaving = today().isAfter(r.checkIn()) ? today() : r.checkIn().plusDays(1);
-        LocalDate newCheckOut = leaving.isBefore(r.checkOut()) ? leaving : r.checkOut();
-        Reservation adjusted = withCheckOut(r, newCheckOut);
-        FolioSummary summary = FolioCalculator.summarise(adjusted, folios.findForReservation(id));
+        LocalDate newCheckOut = leavingDate(r);
+        FolioSummary summary = FolioCalculator.summarise(withCheckOut(r, newCheckOut), folios.findForReservation(id));
 
         if (summary.balance().signum() > 0) {
             if (!force) {
@@ -359,6 +413,33 @@ public class LodgeService {
         return folio(id);
     }
 
+    /** What the guest owes if they check out now (leaving early bills only the nights used). */
+    public FolioSummary checkOutQuote(long id) throws LodgeException {
+        Reservation r = reservation(id);
+        return FolioCalculator.summarise(withCheckOut(r, leavingDate(r)), folios.findForReservation(id));
+    }
+
+    /**
+     * Takes what is still owed and checks the guest out, as one step: if a payment
+     * is refused, nothing is saved and the guest stays checked in.
+     */
+    public Folio settleAndCheckOut(Session session, long id, List<PaymentLine> payments) throws LodgeException {
+        session.require(Permission.POST_FOLIO);
+        boolean paying = payments.stream().anyMatch(p -> p.amount() != null && p.amount().signum() > 0);
+        return atomically(() -> {
+            if (paying) {   // nothing to take (e.g. leaving early, already paid): just check out
+                recordPayments(session, id, payments);
+            }
+            return checkOut(session, id, false);
+        });
+    }
+
+    /** Leaving before the booked date: bill only the nights used (at least one). */
+    private LocalDate leavingDate(Reservation r) {
+        LocalDate leaving = today().isAfter(r.checkIn()) ? today() : r.checkIn().plusDays(1);
+        return leaving.isBefore(r.checkOut()) ? leaving : r.checkOut();
+    }
+
     // =====================================================================
     // Folio: charges and payments
     // =====================================================================
@@ -371,12 +452,34 @@ public class LodgeService {
 
     /** The worked-out bill of each given stay, using one query for all their lines. */
     public Map<Long, FolioSummary> summaries(List<Reservation> stays) {
-        Map<Long, List<FolioEntry>> all = folios.findAllGrouped();
-        Map<Long, FolioSummary> out = new java.util.HashMap<>();
-        for (Reservation r : stays) {
-            out.put(r.id(), FolioCalculator.summarise(r, all.getOrDefault(r.id(), List.of())));
+        Map<Long, FolioSummary> out = new HashMap<>();
+        for (Folio f : folios(stays)) {
+            out.put(f.stay().id(), f.summary());
         }
         return out;
+    }
+
+    /** The folios of the given stays, reading all their lines in one query. */
+    private List<Folio> folios(List<Reservation> stays) {
+        Map<Long, List<FolioEntry>> lines = folios.findForReservations(stays.stream().map(Reservation::id).toList());
+        return stays.stream().map(r -> {
+            List<FolioEntry> entries = lines.getOrDefault(r.id(), List.of());
+            return new Folio(r, entries, FolioCalculator.summarise(r, entries));
+        }).toList();
+    }
+
+    /** Every booking and walk-in (except cancelled ones) as a receipt, with its folio's figures. */
+    public List<Bill> stayReceipts() {
+        List<Reservation> stays = reservations.findAll().stream()
+                .filter(r -> r.status() != ReservationStatus.CANCELLED).toList();
+        Map<Long, FolioSummary> sums = summaries(stays);
+        return stays.stream().map(r -> Bill.forStay(r, sums.get(r.id()))).toList();
+    }
+
+    /** One stay as a receipt, e.g. to refresh its row after a payment or to print it. */
+    public Bill stayReceipt(long reservationId) throws LodgeException {
+        Folio f = folio(reservationId);
+        return Bill.forStay(f.stay(), f.summary());
     }
 
     public FolioEntry postCharge(Session session, long reservationId, ChargeCategory category, String description,
@@ -419,33 +522,56 @@ public class LodgeService {
         return e;
     }
 
+    /**
+     * Several payments at once, e.g. the guest and the company each paying their share.
+     * All or nothing: if one is refused, none is saved. Lines with no amount are skipped.
+     */
+    public void recordPayments(Session session, long reservationId, List<PaymentLine> payments)
+            throws LodgeException {
+        session.require(Permission.POST_FOLIO);
+        List<PaymentLine> real = payments.stream()
+                .filter(p -> p.amount() != null && p.amount().signum() > 0).toList();
+        if (real.isEmpty()) {
+            throw new LodgeException("Enter at least one amount.");
+        }
+        atomically(() -> {
+            for (PaymentLine p : real) {
+                recordPayment(session, reservationId, p.method(), p.amount(), p.payer(), p.reference());
+            }
+            return null;
+        });
+    }
+
     /** Split payment: the guest and the company each pay their share at once, all or nothing. */
     public void recordSplitPayment(Session session, long reservationId, PaymentMethod guestMethod,
                                    BigDecimal guestAmount, PaymentMethod companyMethod, BigDecimal companyAmount,
                                    String reference) throws LodgeException {
-        session.require(Permission.POST_FOLIO);
-        Folio folio = folio(reservationId);
-        if (!folio.stay().hasCompany()) {
+        if (!folio(reservationId).stay().hasCompany()) {
             throw new LodgeException("Add a company to the booking to split the bill.");
         }
-        boolean guestPays = guestAmount != null && guestAmount.signum() > 0;
-        boolean companyPays = companyAmount != null && companyAmount.signum() > 0;
-        if (!guestPays && !companyPays) {
-            throw new LodgeException("Enter at least one amount.");
-        }
+        recordPayments(session, reservationId, List.of(
+                new PaymentLine(Payer.GUEST, guestMethod, guestAmount, reference),
+                new PaymentLine(Payer.COMPANY, companyMethod, companyAmount, reference)));
+    }
+
+    /** Work that may be refused; see {@link #atomically}. */
+    @FunctionalInterface
+    private interface Work<T> {
+        T run() throws LodgeException;
+    }
+
+    /**
+     * Runs several writes as one transaction. A refusal anywhere rolls all of them back,
+     * and the original message reaches the caller. Nested calls join the outer transaction.
+     */
+    private <T> T atomically(Work<T> work) throws LodgeException {
         try {
-            database.inTransaction(() -> {
+            return database.inTransaction(() -> {
                 try {
-                    if (guestPays) {
-                        recordPayment(session, reservationId, guestMethod, guestAmount, Payer.GUEST, reference);
-                    }
-                    if (companyPays) {
-                        recordPayment(session, reservationId, companyMethod, companyAmount, Payer.COMPANY, reference);
-                    }
+                    return work.run();
                 } catch (LodgeException e) {
-                    throw new Rollback(e);   // undo the first payment if the second is refused
+                    throw new Rollback(e);
                 }
-                return null;
             });
         } catch (Rollback r) {
             throw r.cause;
@@ -472,7 +598,7 @@ public class LodgeService {
             throw new LodgeException("That line is already void.");
         }
         folios.voidEntry(entry.id(), why);
-        audit.record(session.username(), AuditAction.ENTRY_VOIDED, "BK" + String.format("%04d", entry.reservationId())
+        audit.record(session.username(), AuditAction.ENTRY_VOIDED, Reservation.referenceFor(entry.reservationId())
                 + " " + entry.kind() + " " + Money.format(entry.amount()) + ": " + why);
     }
 
@@ -483,12 +609,11 @@ public class LodgeService {
     public DashboardData dashboard(Session session) {
         session.require(Permission.VIEW_DASHBOARD);
         LocalDate today = today();
+        List<Reservation> stays = reservations.findAll();
         List<Reservation> arrivals = new ArrayList<>();
         List<Reservation> departures = new ArrayList<>();
         int inHouse = 0;
-        BigDecimal outstanding = BigDecimal.ZERO;
-        Map<Long, List<FolioEntry>> allEntries = folios.findAllGrouped();
-        for (Reservation r : reservations.findAll()) {
+        for (Reservation r : stays) {
             if (r.status() == ReservationStatus.BOOKED && !r.checkIn().isAfter(today)) {
                 arrivals.add(r);
             }
@@ -498,13 +623,9 @@ public class LodgeService {
                     departures.add(r);
                 }
             }
-            if (r.status() == ReservationStatus.CHECKED_IN || r.status() == ReservationStatus.CHECKED_OUT) {
-                BigDecimal bal = FolioCalculator.summarise(r, allEntries.getOrDefault(r.id(), List.of())).balance();
-                if (bal.signum() > 0) {
-                    outstanding = outstanding.add(bal);
-                }
-            }
         }
+        BigDecimal outstanding = owing(stays).stream().map(f -> f.summary().balance())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         Map<RoomStatus, Integer> byStatus = new EnumMap<>(RoomStatus.class);
         List<Room> all = rooms.findAll();
         for (RoomStatus s : RoomStatus.values()) byStatus.put(s, 0);
@@ -527,19 +648,16 @@ public class LodgeService {
     /** Stays that still owe money (in house or already gone), largest debt first. */
     public List<Folio> outstanding(Session session) {
         session.require(Permission.VIEW_REPORTS);
-        Map<Long, List<FolioEntry>> allEntries = folios.findAllGrouped();
-        List<Folio> owing = new ArrayList<>();
-        for (Reservation r : reservations.findAll()) {
-            if (r.status() == ReservationStatus.CHECKED_IN || r.status() == ReservationStatus.CHECKED_OUT) {
-                List<FolioEntry> entries = allEntries.getOrDefault(r.id(), List.of());
-                FolioSummary s = FolioCalculator.summarise(r, entries);
-                if (s.balance().signum() > 0) {
-                    owing.add(new Folio(r, entries, s));
-                }
-            }
-        }
+        List<Folio> owing = new ArrayList<>(owing(reservations.findAll()));
         owing.sort((a, b) -> b.summary().balance().compareTo(a.summary().balance()));
         return owing;
+    }
+
+    /** The stays among these that have been billed (in house or gone) and still owe money. */
+    private List<Folio> owing(List<Reservation> stays) {
+        List<Reservation> billed = stays.stream().filter(r -> r.status() == ReservationStatus.CHECKED_IN
+                || r.status() == ReservationStatus.CHECKED_OUT).toList();
+        return folios(billed).stream().filter(f -> f.summary().balance().signum() > 0).toList();
     }
 
     public void recordExport(Session session, String what) {
@@ -638,7 +756,8 @@ public class LodgeService {
 
     private static Reservation withCheckOut(Reservation r, LocalDate checkOut) {
         return new Reservation(r.id(), r.guestName(), r.guestPhone(), r.company(), r.companyPaysRoom(), r.room(),
-                r.checkIn(), checkOut, r.status(), r.nightlyRate(), r.vatPercent(), r.notes(), r.createdBy());
+                r.checkIn(), checkOut, r.status(), r.nightlyRate(), r.vatPercent(), r.notes(), r.createdBy(),
+                r.createdAt());
     }
 
     private static String describe(Reservation r) {

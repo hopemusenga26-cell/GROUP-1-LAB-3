@@ -43,6 +43,10 @@ public class SqliteReportDao implements ReportDao {
                 SELECT substr(issued_at, 1, 10),
                        SUM(CAST(ROUND(CAST(paid AS REAL) * 100) AS INTEGER))
                 FROM bills GROUP BY 1
+                UNION ALL
+                SELECT substr(paid_at, 1, 10),
+                       SUM(CAST(ROUND(CAST(amount AS REAL) * 100) AS INTEGER))
+                FROM bill_payments GROUP BY 1
             )
             SELECT days.d,
                    (SELECT COUNT(*) FROM rooms)                                          AS rooms,

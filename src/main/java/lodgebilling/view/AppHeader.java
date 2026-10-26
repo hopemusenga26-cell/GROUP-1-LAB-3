@@ -8,7 +8,7 @@ import lodgebilling.model.BillingModel;
 import lodgebilling.model.User;
 
 // Lab 3 - Group 1
-/** The bar above each page: the page's name, who is signed in, theme switch and log out. */
+/** The bar above each page: the page's name, who is signed in, theme switch, password and log out. */
 public class AppHeader extends HBox {
 
     private final Label pageTitle = new Label();
@@ -26,7 +26,8 @@ public class AppHeader extends HBox {
         ThemeToggle theme = new ThemeToggle(model.themeProperty(), actions::toggleTheme);
 
         setAlignment(Pos.CENTER_LEFT);
-        getChildren().addAll(pageTitle, Ui.spacer(), who, role, theme, Ui.compact("Log out", actions::logout));
+        getChildren().addAll(pageTitle, Ui.spacer(), who, role, theme,
+                Ui.compact("Password", actions::changePassword), Ui.compact("Log out", actions::logout));
         getStyleClass().add("header");
     }
 

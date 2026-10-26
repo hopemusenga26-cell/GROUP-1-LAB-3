@@ -90,6 +90,40 @@ public class SqliteRoomDao implements RoomDao {
     }
 
     @Override
+    public void update(long roomId, String number, RoomType type) {
+        try (PreparedStatement ps = db.prepareStatement("UPDATE rooms SET number = ?, room_type = ? WHERE id = ?")) {
+            ps.setString(1, number);
+            ps.setString(2, type.name());
+            ps.setLong(3, roomId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataException("Could not update room #" + roomId, e);
+        }
+    }
+
+    @Override
+    public boolean hasBookings(long roomId) {
+        try (PreparedStatement ps = db.prepareStatement("SELECT 1 FROM reservations WHERE room_id = ? LIMIT 1")) {
+            ps.setLong(1, roomId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new DataException("Could not check bookings for room #" + roomId, e);
+        }
+    }
+
+    @Override
+    public void delete(long roomId) {
+        try (PreparedStatement ps = db.prepareStatement("DELETE FROM rooms WHERE id = ?")) {
+            ps.setLong(1, roomId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataException("Could not delete room #" + roomId, e);
+        }
+    }
+
+    @Override
     public int count() {
         try (Statement st = db.createStatement(); ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM rooms")) {
             return rs.next() ? rs.getInt(1) : 0;

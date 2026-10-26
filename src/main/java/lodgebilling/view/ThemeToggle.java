@@ -8,7 +8,7 @@ import lodgebilling.model.Theme;
 /**
  * The light/dark switch: a small button that names the theme it will switch to.
  * Its text is bound to the theme property, so changing the theme from anywhere
- * (the View menu, Ctrl+T) updates it too.
+ * (e.g. Ctrl+T) updates it too.
  */
 public class ThemeToggle extends Button {
 

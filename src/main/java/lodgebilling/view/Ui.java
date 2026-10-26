@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 import lodgebilling.model.Money;
 import lodgebilling.model.Theme;
+import lodgebilling.model.service.LodgeException;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -147,6 +148,22 @@ public final class Ui {
         ((Button) a.getDialogPane().lookupButton(ok)).setDefaultButton(false);
         ((Button) a.getDialogPane().lookupButton(ButtonType.CANCEL)).setDefaultButton(true);
         return a.showAndWait().filter(b -> b == ok).isPresent();
+    }
+
+    /** A question where yes is the usual answer, so it is the default (Enter). */
+    public static boolean ask(Window owner, Theme theme, String header, String text, String yesText, String noText) {
+        ButtonType yes = new ButtonType(yesText, javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+        ButtonType no = new ButtonType(noText, javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE);
+        Alert a = new Alert(Alert.AlertType.CONFIRMATION, text, yes, no);
+        a.initOwner(owner);
+        a.setHeaderText(header);
+        style(a.getDialogPane(), theme);
+        return a.showAndWait().filter(b -> b == yes).isPresent();
+    }
+
+    /** An amount typed into a form, e.g. "150" or "150.50"; refused with a message otherwise. */
+    public static BigDecimal amount(String text) throws LodgeException {
+        return Money.parse(text).orElseThrow(() -> new LodgeException("Enter an amount like 150 or 150.50."));
     }
 
     public static void info(Window owner, Theme theme, String header, String text) {

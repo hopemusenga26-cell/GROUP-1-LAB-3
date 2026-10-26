@@ -28,11 +28,9 @@ import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.Money;
 import lodgebilling.model.Payer;
-import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationStatus;
 import lodgebilling.model.security.Permission;
-import lodgebilling.model.service.LodgeException;
 import lodgebilling.model.service.LodgeService;
 import lodgebilling.view.FormDialog;
 import lodgebilling.view.Styles;
@@ -93,7 +91,7 @@ public class FolioWindow {
         Scene scene = new Scene(root, 1200, 700);
         scene.getStylesheets().add(Styles.stylesheet());
         Styles.apply(ctx.theme(), root);
-        // Keyboard: Ctrl+Shift+C add charge, Ctrl+Shift+P payment, Esc close
+        // Keyboard: Ctrl+Shift+C add charge, Ctrl+Shift+P take payment, Esc close
         scene.getAccelerators().put(new KeyCodeCombination(KeyCode.ESCAPE), stage::close);
 
         stage.initOwner(ctx.owner());
@@ -106,7 +104,7 @@ public class FolioWindow {
         scene.getAccelerators().put(new KeyCodeCombination(KeyCode.C, KeyCombination.SHORTCUT_DOWN,
                 KeyCombination.SHIFT_DOWN), this::addCharge);
         scene.getAccelerators().put(new KeyCodeCombination(KeyCode.P, KeyCombination.SHORTCUT_DOWN,
-                KeyCombination.SHIFT_DOWN), this::recordPayment);
+                KeyCombination.SHIFT_DOWN), this::takePayment);
         stage.showAndWait();
     }
 
@@ -146,14 +144,12 @@ public class FolioWindow {
         }
 
         List<Row> rows = new ArrayList<>();
-        Bill room = new Bill("", "", r.room().type(), r.nightlyRate(), r.nights(), BigDecimal.ZERO,
-                BigDecimal.ZERO, "", null, "");
         rows.add(new Row(null, "Room", "Room " + r.room().number() + ", " + r.nights() + " night(s) x "
                 + Money.format(r.nightlyRate()), r.payerName(r.companyPaysRoom() ? Payer.COMPANY : Payer.GUEST),
-                room.getRoomCharge(), "", "", null));
-        if (room.getDiscount().signum() > 0) {
+                s.roomCharge(), "", "", null));
+        if (s.discount().signum() > 0) {
             rows.add(new Row(null, "Discount", "Long stay (" + Bill.DISCOUNT_MIN_NIGHTS + "+ nights, "
-                    + Bill.discountPercentLabel() + ")", "", room.getDiscount().negate(), "", "", null));
+                    + Bill.discountPercentLabel() + ")", "", s.discount().negate(), "", "", null));
         }
         for (FolioEntry e : folio.entries()) {
             String type = e.isCharge() ? e.categoryLabel() : e.isPayment() ? "Payment: " + e.categoryLabel() : "Refund";
@@ -207,10 +203,12 @@ public class FolioWindow {
         }
         if (ctx.can(Permission.POST_FOLIO) && r.status() != ReservationStatus.CANCELLED
                 && folio.summary().balance().signum() > 0) {
-            actions.getChildren().add(Ui.compact("Record payment", this::recordPayment));
-            if (r.hasCompany()) {
-                actions.getChildren().add(Ui.compact("Split payment", this::splitPayment));
-            }
+            Button pay = Ui.compact("Take payment", this::takePayment);
+            pay.setDefaultButton(r.status() != ReservationStatus.CHECKED_IN);
+            actions.getChildren().add(pay);
+        }
+        if (r.status() != ReservationStatus.CANCELLED) {
+            actions.getChildren().add(Ui.compact("Print receipt", () -> ctx.printReceipt(stage, reservationId)));
         }
         if (ctx.can(Permission.VOID_FOLIO_ENTRY)) {
             Button v = Ui.compact("Void line", this::voidLine);
@@ -263,60 +261,17 @@ public class FolioWindow {
         form.addNote("VAT (" + r.vatPercent().stripTrailingZeros().toPlainString()
                 + "%) is added on top in the totals.");
         form.onSubmit(() -> ctx.lodge().postCharge(ctx.session(), reservationId, cat.getValue(), desc.getText(),
-                parseAmount(amount.getText()), payer.getValue()));
+                Ui.amount(amount.getText()), payer.getValue()));
         if (form.showAndWait()) {
             ctx.success("Charge added to " + r.reference() + ".");
         }
         reload();
     }
 
-    private void recordPayment() {
-        Reservation r = folio.stay();
-        if (!ctx.can(Permission.POST_FOLIO)) {
-            return;
-        }
-        FormDialog form = new FormDialog(stage, ctx.theme(), "Record payment",
-                "Payment for " + r.reference() + " - " + Money.format(folio.summary().balance()) + " due",
-                "Record payment", "Cancel");
-        ComboBox<PaymentMethod> method = form.add("Method",
-                new ComboBox<>(FXCollections.observableArrayList(PaymentMethod.values())));
-        method.setValue(PaymentMethod.CASH);
-        ComboBox<Payer> payer = payerBox(form, r);
-        TextField amount = form.add("Amount in K", new TextField());
-        amount.setText(owed(payer.getValue()).toPlainString());
-        payer.valueProperty().addListener((o, a, b) -> amount.setText(owed(b).toPlainString()));
-        TextField ref = form.add("Reference", new TextField());
-        ref.setPromptText("Optional: receipt no., mobile money ref");
-        // Progressive disclosure: the reference only matters for non-cash payments
-        ref.disableProperty().bind(method.valueProperty().isEqualTo(PaymentMethod.CASH));
-        form.addNote("Card payments are taken on the lodge's card machine. Never type card numbers here.");
-        form.onSubmit(() -> ctx.lodge().recordPayment(ctx.session(), reservationId, method.getValue(),
-                parseAmount(amount.getText()), payer.getValue(), ref.getText()));
-        if (form.showAndWait()) {
-            ctx.success("Payment recorded for " + r.reference() + ".");
-        }
-        reload();
-    }
-
-    private void splitPayment() {
-        Reservation r = folio.stay();
-        FormDialog form = new FormDialog(stage, ctx.theme(), "Split payment",
-                "Guest and company each pay their share", "Record both", "Cancel");
-        TextField guestAmt = form.add(r.guestName() + " pays K", new TextField(owed(Payer.GUEST).toPlainString()));
-        ComboBox<PaymentMethod> guestMethod = form.add("by",
-                new ComboBox<>(FXCollections.observableArrayList(PaymentMethod.values())));
-        guestMethod.setValue(PaymentMethod.CASH);
-        TextField coAmt = form.add(r.company() + " pays K", new TextField(owed(Payer.COMPANY).toPlainString()));
-        ComboBox<PaymentMethod> coMethod = form.add("by ",
-                new ComboBox<>(FXCollections.observableArrayList(PaymentMethod.values())));
-        coMethod.setValue(PaymentMethod.BANK_TRANSFER);
-        TextField ref = form.add("Reference", new TextField());
-        form.addNote("Both payments are saved together, or neither is.");
-        form.onSubmit(() -> ctx.lodge().recordSplitPayment(ctx.session(), reservationId,
-                guestMethod.getValue(), parseOptional(guestAmt.getText()),
-                coMethod.getValue(), parseOptional(coAmt.getText()), ref.getText()));
-        if (form.showAndWait()) {
-            ctx.success("Split payment recorded for " + r.reference() + ".");
+    /** The shared payment window: one amount per payer who owes, filled in with what they owe. */
+    private void takePayment() {
+        if (folio.summary().balance().signum() > 0) {
+            ctx.takePayment(stage, reservationId);
         }
         reload();
     }
@@ -382,23 +337,6 @@ public class FolioWindow {
         });
         payer.setValue(Payer.GUEST);
         return payer;
-    }
-
-    private BigDecimal owed(Payer payer) {
-        return folio.summary().payers().stream().filter(p -> p.payer() == payer).findFirst()
-                .map(FolioSummary.PayerLine::balance).filter(b -> b.signum() > 0).orElse(BigDecimal.ZERO);
-    }
-
-    static BigDecimal parseAmount(String text) throws LodgeException {
-        String t = text == null ? "" : text.trim().replace(",", "");
-        if (!t.matches("\\d{1,7}(\\.\\d{1,2})?")) {
-            throw new LodgeException("Enter an amount like 150 or 150.50.");
-        }
-        return new BigDecimal(t);
-    }
-
-    private static BigDecimal parseOptional(String text) throws LodgeException {
-        return text == null || text.isBlank() ? BigDecimal.ZERO : parseAmount(text);
     }
 
     private static Label big(String text) {

@@ -113,7 +113,19 @@ public final class Database implements AutoCloseable {
             voided          INTEGER NOT NULL DEFAULT 0,
             void_reason     TEXT    NOT NULL DEFAULT ''
         )""",
-        "CREATE INDEX IF NOT EXISTS idx_folio_res ON folio_entries(reservation_id)"
+        "CREATE INDEX IF NOT EXISTS idx_folio_res ON folio_entries(reservation_id)",
+        // A later payment on a quick bill (e.g. the rest of a deposit), dated so the
+        // daily report counts it on the day it was paid, not the day the bill was issued
+        """
+        CREATE TABLE IF NOT EXISTS bill_payments (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            bill_id   INTEGER NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
+            method    TEXT    NOT NULL,
+            amount    TEXT    NOT NULL,
+            paid_at   TEXT    NOT NULL,
+            paid_by   TEXT    NOT NULL
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_bill_payments_bill ON bill_payments(bill_id)"
     };
 
     private final Connection connection;

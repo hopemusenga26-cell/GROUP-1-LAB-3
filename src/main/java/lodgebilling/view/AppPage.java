@@ -7,7 +7,7 @@ public enum AppPage {
     DASHBOARD("Dashboard", Permission.VIEW_DASHBOARD),
     TAPE_CHART("Tape chart", Permission.MANAGE_RESERVATIONS),
     STAYS("Stays & folios", Permission.MANAGE_RESERVATIONS),
-    QUICK_BILLS("Receipts", Permission.CREATE_BILL),
+    RECEIPTS("Receipts", Permission.CREATE_BILL),
     ROOMS("Rooms", Permission.UPDATE_ROOM_STATUS),
     REPORTS("Reports", Permission.VIEW_REPORTS),
     STAFF("Staff", Permission.MANAGE_USERS);

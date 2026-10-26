@@ -5,6 +5,7 @@ import lodgebilling.model.Payer;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -17,8 +18,8 @@ public interface FolioDao {
     /** One stay's lines, in the order they were posted. */
     List<FolioEntry> findForReservation(long reservationId);
 
-    /** Every line of every folio, grouped by reservation id. */
-    Map<Long, List<FolioEntry>> findAllGrouped();
+    /** The lines of the given stays, grouped by reservation id, in one query. */
+    Map<Long, List<FolioEntry>> findForReservations(Collection<Long> reservationIds);
 
     /** Marks a line as voided, with the reason. A line already voided is left as it is. */
     void voidEntry(long entryId, String reason);

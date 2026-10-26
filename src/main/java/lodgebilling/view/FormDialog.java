@@ -13,8 +13,12 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
+import lodgebilling.dao.DataException;
 import lodgebilling.model.Theme;
 import lodgebilling.model.service.UserFacingException;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A small pop-up form (label + input rows, an error line, OK and Cancel).
@@ -22,6 +26,8 @@ import lodgebilling.model.service.UserFacingException;
  * the dialog stays open so the user can fix the input.
  */
 public class FormDialog {
+
+    private static final Logger LOG = Logger.getLogger(FormDialog.class.getName());
 
     /** The work to do when OK is clicked. Throw to keep the dialog open with a message. */
     @FunctionalInterface
@@ -104,6 +110,10 @@ public class FormDialog {
         ok.addEventFilter(ActionEvent.ACTION, e -> {
             try {
                 submit.run();
+            } catch (DataException ex) {
+                e.consume();   // stay open
+                LOG.log(Level.SEVERE, "Database problem", ex);
+                showError("Database problem: " + ex.getMessage());
             } catch (UserFacingException | RuntimeException ex) {
                 e.consume();   // stay open
                 showError(ex.getMessage());

@@ -22,5 +22,13 @@ public interface RoomDao {
 
     void setStatus(long roomId, RoomStatus status);
 
+    /** Renumbers a room or changes its type; its status is kept. */
+    void update(long roomId, String number, RoomType type);
+
+    /** True if any booking, past or future, is for this room. */
+    boolean hasBookings(long roomId);
+
+    void delete(long roomId);
+
     int count();
 }

@@ -9,7 +9,11 @@ import lodgebilling.dao.BillDao;
 import lodgebilling.model.security.Permission;
 import lodgebilling.model.security.Session;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * The M in MVC: everything the app remembers. It knows nothing about screens.
@@ -31,11 +35,6 @@ public class BillingModel {
     private final ObservableList<Bill> bills = FXCollections.observableArrayList();
     private final ObjectProperty<StatusMessage> status = new SimpleObjectProperty<>(READY);
     private final ObjectProperty<Theme> theme;
-
-    // The form stays filled after saving, so remember what was last saved
-    // to stop the same bill being saved twice
-    private BillInput lastSavedInput;
-    private String lastSavedReceiptNumber;
 
     public BillingModel(BillDao billDao, AuditLogDao audit, Session session, Theme initialTheme) {
         this.billDao = billDao;
@@ -83,11 +82,57 @@ public class BillingModel {
         session.require(Permission.CREATE_BILL);
         Bill bill = billDao.insert(input, LocalDateTime.now(), session.username());
         bills.add(bill);
-        lastSavedInput = input;
-        lastSavedReceiptNumber = bill.getReceiptNumber();
         audit.record(session.username(), AuditAction.BILL_SAVED,
                 bill.getReceiptNumber() + " for " + bill.getGuestName() + ", total " + Money.format(bill.getTotal()));
         return bill;
+    }
+
+    /**
+     * Puts the bookings and walk-ins in the list beside the saved bills, newest last.
+     * They are re-read each time, so their payments and charges are up to date.
+     */
+    public void showStays(List<Bill> stays) {
+        List<Bill> rows = new ArrayList<>(bills.stream().filter(b -> !b.isStay()).toList());
+        rows.addAll(stays);
+        rows.sort(Comparator.comparing(Bill::getIssuedAt));
+        bills.setAll(rows);
+    }
+
+    /** Swaps in the new figures of one receipt (e.g. after a payment), keeping its place in the list. */
+    public void replace(Bill updated) {
+        for (int i = 0; i < bills.size(); i++) {
+            if (bills.get(i).sameReceipt(updated)) {
+                bills.set(i, updated);
+                return;
+            }
+        }
+    }
+
+    /**
+     * A later payment on a saved quick bill, e.g. the guest paid half up front and now pays the rest.
+     * Refused if it is more than the balance (stops typing 10000 for 1000).
+     */
+    public Bill recordPayment(Bill bill, PaymentMethod method, BigDecimal amount) throws ValidationException {
+        session.require(Permission.CREATE_BILL);
+        if (bill.isStay()) {
+            throw new IllegalArgumentException("Payments on a stay go to its folio");
+        }
+        if (bill.getBalance().signum() <= 0) {
+            throw new ValidationException(bill.getReceiptNumber() + " is already paid in full.", FormField.PAID);
+        }
+        if (amount == null || amount.signum() <= 0) {
+            throw new ValidationException("Enter an amount above zero.", FormField.PAID);
+        }
+        if (amount.compareTo(bill.getBalance()) > 0) {
+            throw new ValidationException(bill.getGuestName() + " owes only "
+                    + Money.format(bill.getBalance()) + ".", FormField.PAID);
+        }
+        Bill updated = bill.withPayment(amount);
+        billDao.addPayment(bill.getReceiptNumber(), method, amount, LocalDateTime.now(), session.username());
+        replace(updated);
+        audit.record(session.username(), AuditAction.PAYMENT_RECORDED, bill.getReceiptNumber() + " "
+                + Money.format(amount) + " from " + bill.getGuestName() + ", balance " + Money.format(updated.getBalance()));
+        return updated;
     }
 
     public void delete(Bill bill) {
@@ -96,23 +141,6 @@ public class BillingModel {
         bills.remove(bill);
         audit.record(session.username(), AuditAction.BILL_DELETED,
                 bill.getReceiptNumber() + " for " + bill.getGuestName() + ", total " + Money.format(bill.getTotal()));
-        // If the bill still in the form was deleted, allow it to be saved again
-        if (bill.getReceiptNumber().equals(lastSavedReceiptNumber)) {
-            forgetLastSaved();
-        }
     }
 
-    /** True if this is exactly what was just saved (records compare all their fields). */
-    public boolean isRepeatOfLastSave(BillInput input) {
-        return input.equals(lastSavedInput);
-    }
-
-    public String lastSavedReceiptNumber() {
-        return lastSavedReceiptNumber;
-    }
-
-    public void forgetLastSaved() {
-        lastSavedInput = null;
-        lastSavedReceiptNumber = null;
-    }
 }

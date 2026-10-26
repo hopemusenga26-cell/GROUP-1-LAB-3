@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /** Bookings and stays. Every reservation read comes with its room. */
 public interface ReservationDao {
@@ -25,6 +26,9 @@ public interface ReservationDao {
      * Two stays overlap when each one starts before the other ends.
      */
     boolean roomTaken(long roomId, LocalDate checkIn, LocalDate checkOut, long ignoreReservationId);
+
+    /** The rooms a live booking holds on any night of this range (one query for every room). */
+    Set<Long> takenRoomIds(LocalDate checkIn, LocalDate checkOut, long ignoreReservationId);
 
     /** Saves a new booking and returns its id. */
     long insert(String guestName, String phone, String company, boolean companyPaysRoom, long roomId,

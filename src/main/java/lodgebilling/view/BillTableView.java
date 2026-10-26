@@ -32,7 +32,6 @@ public class BillTableView extends TableView<Bill> {
 
         TableColumn<Bill, Integer> nightsCol = new TableColumn<>("Nights");
         nightsCol.setCellValueFactory(new PropertyValueFactory<>("nights"));
-        nightsCol.setStyle("-fx-alignment: CENTER;");
 
         TableColumn<Bill, LocalDateTime> dateCol = new TableColumn<>("Date");
         dateCol.setCellValueFactory(new PropertyValueFactory<>("issuedAt"));
@@ -56,6 +55,11 @@ public class BillTableView extends TableView<Bill> {
         TableColumn<Bill, String> byCol = new TableColumn<>("By");
         byCol.setCellValueFactory(new PropertyValueFactory<>("createdBy"));
         getColumns().add(byCol);
+
+        // Every value sits in the middle of its column, under its heading
+        for (TableColumn<Bill, ?> col : getColumns()) {
+            col.setStyle("-fx-alignment: CENTER;");
+        }
 
         setItems(bills);
         setPlaceholder(new Label("No receipts saved yet."));
@@ -115,7 +119,7 @@ public class BillTableView extends TableView<Bill> {
         getSelectionModel().clearSelection();
     }
 
-    /** A right-aligned column that shows a BigDecimal as "K 0.00". */
+    /** A column that shows a BigDecimal as "K 0.00". */
     private static TableColumn<Bill, BigDecimal> moneyColumn(String title, String property) {
         TableColumn<Bill, BigDecimal> col = new TableColumn<>(title);
         col.setCellValueFactory(new PropertyValueFactory<>(property));
@@ -126,7 +130,6 @@ public class BillTableView extends TableView<Bill> {
                 setText(empty || value == null ? null : Money.format(value));
             }
         });
-        col.setStyle("-fx-alignment: CENTER-RIGHT;");
         return col;
     }
 }

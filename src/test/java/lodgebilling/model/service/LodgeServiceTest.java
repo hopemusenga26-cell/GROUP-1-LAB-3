@@ -7,11 +7,13 @@ import lodgebilling.dao.SqliteReportDao;
 import lodgebilling.dao.SqliteReservationDao;
 import lodgebilling.dao.SqliteRoomDao;
 import lodgebilling.dao.SqliteSettingsDao;
+import lodgebilling.model.Bill;
 import lodgebilling.model.DailyStat;
 import lodgebilling.model.ChargeCategory;
 import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.Payer;
+import lodgebilling.model.PaymentLine;
 import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationForm;
@@ -147,6 +149,26 @@ class LodgeServiceTest {
     }
 
     @Test
+    void walkInsAndBookingsShowAsReceiptsWithTheirFolioFigures() throws LodgeException {
+        Reservation walkIn = lodge.walkIn(DESK, form("John Phiri", "201", TODAY, TODAY.plusDays(1)));
+        lodge.recordPayment(DESK, walkIn.id(), PaymentMethod.CASH, k("200"), Payer.GUEST, "");
+        Reservation booked = lodge.book(DESK, form("Mary Banda", "101", TODAY.plusDays(2), TODAY.plusDays(4)));
+        Reservation cancelled = lodge.book(DESK, form("Ben Tembo", "102", TODAY.plusDays(2), TODAY.plusDays(3)));
+        lodge.cancel(DESK, cancelled.id());
+
+        List<Bill> receipts = lodge.stayReceipts();
+        assertEquals(2, receipts.size());   // the cancelled booking is left out
+        Bill john = receipts.stream().filter(b -> b.getReceiptNumber().equals(walkIn.reference())).findFirst().orElseThrow();
+        assertTrue(john.isStay());
+        // Deluxe 1 x 550, VAT 16% = 88, total 638, 200 paid
+        assertEquals(k("88.00"), john.getVat());
+        assertEquals(k("638.00"), john.getTotal());
+        assertEquals(k("438.00"), john.getBalance());
+        assertEquals("mary", john.getCreatedBy());
+        assertTrue(receipts.stream().anyMatch(b -> b.getReceiptNumber().equals(booked.reference())));
+    }
+
+    @Test
     void leavingEarlyBillsOnlyNightsUsedAndRefundsTheChange() throws LodgeException {
         // Booked 3 nights, paid in full up front, leaves on the first day
         Reservation r = lodge.walkIn(DESK, form("John Phiri", "101", TODAY, TODAY.plusDays(3)));
@@ -193,6 +215,52 @@ class LodgeServiceTest {
 
         lodge.recordSplitPayment(DESK, r.id(), PaymentMethod.CASH, k("116"), PaymentMethod.BANK_TRANSFER, k("406"), "");
         assertTrue(lodge.folio(r.id()).summary().settled());
+    }
+
+    @Test
+    void walkInCanPayInTheSameStep() throws LodgeException {
+        // Deluxe 1 x 550 + 16% VAT = 638, paid in full at check-in
+        Reservation r = lodge.walkIn(DESK, form("John Phiri", "201", TODAY, TODAY.plusDays(1)),
+                new PaymentLine(Payer.GUEST, PaymentMethod.CASH, k("638"), ""));
+        assertEquals(ReservationStatus.CHECKED_IN, r.status());
+        assertTrue(lodge.folio(r.id()).summary().settled());
+    }
+
+    @Test
+    void refusedWalkInPaymentLeavesNoBookingBehind() {
+        // Paying more than the stay costs is refused, and the booking and check-in go with it
+        assertThrows(LodgeException.class, () -> lodge.walkIn(DESK,
+                form("John Phiri", "201", TODAY, TODAY.plusDays(1)),
+                new PaymentLine(Payer.GUEST, PaymentMethod.CASH, k("6380"), "")));
+        assertTrue(lodge.reservations().isEmpty());
+        assertEquals(RoomStatus.AVAILABLE, room("201").status());
+    }
+
+    @Test
+    void settleAndCheckOutTakesWhatIsOwedForTheNightsUsed() throws LodgeException {
+        Reservation r = lodge.walkIn(DESK, form("John Phiri", "101", TODAY, TODAY.plusDays(3)));
+        // Leaving on the first day: one Standard night, 350 + 16% VAT
+        assertEquals(k("406.00"), lodge.checkOutQuote(r.id()).balance());
+
+        // Too little is refused and the guest stays in
+        assertThrows(BalanceDueException.class, () -> lodge.settleAndCheckOut(DESK, r.id(),
+                List.of(new PaymentLine(Payer.GUEST, PaymentMethod.CASH, k("400"), ""))));
+        assertEquals(ReservationStatus.CHECKED_IN, lodge.reservation(r.id()).status());
+        assertEquals(0, lodge.folio(r.id()).summary().paid().signum(), "a refused check-out keeps no payment");
+
+        LodgeService.Folio done = lodge.settleAndCheckOut(DESK, r.id(),
+                List.of(new PaymentLine(Payer.GUEST, PaymentMethod.MOBILE_MONEY, k("406"), "MTN 55")));
+        assertEquals(ReservationStatus.CHECKED_OUT, done.stay().status());
+        assertTrue(done.summary().settled());
+    }
+
+    @Test
+    void settleAndCheckOutWithNothingOwedJustChecksOut() throws LodgeException {
+        // Paid for two nights at the desk, leaves after the first: nothing more to take
+        Reservation r = lodge.walkIn(DESK, form("John Phiri", "101", TODAY, TODAY.plusDays(2)),
+                new PaymentLine(Payer.GUEST, PaymentMethod.CASH, k("812"), ""));
+        LodgeService.Folio done = lodge.settleAndCheckOut(DESK, r.id(), List.of());
+        assertEquals(ReservationStatus.CHECKED_OUT, done.stay().status());
     }
 
     @Test

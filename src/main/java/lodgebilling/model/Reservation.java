@@ -2,6 +2,7 @@ package lodgebilling.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -11,7 +12,7 @@ import java.time.temporal.ChronoUnit;
 public record Reservation(long id, String guestName, String guestPhone, String company,
                           boolean companyPaysRoom, Room room, LocalDate checkIn, LocalDate checkOut,
                           ReservationStatus status, BigDecimal nightlyRate, BigDecimal vatPercent,
-                          String notes, String createdBy) {
+                          String notes, String createdBy, LocalDateTime createdAt) {
 
     public int nights() {
         return (int) ChronoUnit.DAYS.between(checkIn, checkOut);
@@ -27,7 +28,12 @@ public record Reservation(long id, String guestName, String guestPhone, String c
     }
 
     public String reference() {
-        return String.format("BK%04d", id);   // BK = booking; receipts use R001
+        return referenceFor(id);
+    }
+
+    /** Booking 7 is shown as "BK0007" (BK = booking; quick receipts use R001). */
+    public static String referenceFor(long id) {
+        return String.format("BK%04d", id);
     }
 
     public String payerName(Payer payer) {

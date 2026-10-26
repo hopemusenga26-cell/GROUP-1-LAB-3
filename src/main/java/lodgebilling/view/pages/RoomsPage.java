@@ -34,15 +34,21 @@ import java.util.Map;
 
 /**
  * Room board for housekeeping and the front desk: one coloured tile per room.
- * Select a tile (click, or Tab + Space), then mark it clean, dirty or under maintenance.
+ * The Show list (with counts) narrows the board to Available, Occupied, Dirty or
+ * Maintenance rooms. Select a tile (click, or Tab + Space), then mark it clean,
+ * dirty or under maintenance. Admins can also add, edit and delete rooms.
  */
 public class RoomsPage implements Page {
 
     private final PageContext ctx;
     private final FlowPane tiles = new FlowPane(12, 12);
     private final ToggleGroup group = new ToggleGroup();
-    private final HBox counts = new HBox(8);
+    private final ComboBox<Filter> filter = new ComboBox<>();
     private final VBox root;
+    // The rooms last read from the database; the filter only chooses which of them to show
+    private List<Room> rooms = List.of();
+    private Map<Long, Reservation> inHouse = Map.of();
+    private RoomStatus shown;   // null = all rooms
 
     public RoomsPage(PageContext ctx) {
         this.ctx = ctx;
@@ -55,7 +61,12 @@ public class RoomsPage implements Page {
         }
         HBox actions = Ui.row(clean, dirty, repair, Ui.spacer());
         if (ctx.can(Permission.MANAGE_ROOMS)) {
-            actions.getChildren().addAll(Ui.compact("Add room", this::addRoom),
+            Button edit = Ui.compact("Edit room", this::editRoom);
+            Button delete = Ui.compact("Delete room", this::deleteRoom);
+            delete.getStyleClass().add("danger");
+            edit.disableProperty().bind(group.selectedToggleProperty().isNull());
+            delete.disableProperty().bind(group.selectedToggleProperty().isNull());
+            actions.getChildren().addAll(Ui.compact("Add room", this::addRoom), edit, delete,
                     Ui.compact("Rates & VAT", this::editRates));
         }
         tiles.setRowValignment(VPos.TOP);
@@ -64,7 +75,16 @@ public class RoomsPage implements Page {
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("main-scroll");
         VBox.setVgrow(scroll, Priority.ALWAYS);
-        root = new VBox(12, actions, counts, scroll);
+        filter.valueProperty().addListener((obs, old, f) -> {
+            // The list is emptied while it is rebuilt; that is not a choice
+            if (f != null && f.status() != shown) {
+                shown = f.status();
+                showTiles();
+            }
+        });
+        Label show = Ui.fixed("Show");
+        show.setLabelFor(filter);
+        root = new VBox(12, actions, Ui.row(show, filter), scroll);
         root.setPadding(new Insets(16, 20, 16, 20));
     }
 
@@ -75,28 +95,58 @@ public class RoomsPage implements Page {
 
     @Override
     public void refresh() {
-        Long selectedId = group.getSelectedToggle() == null ? null : (Long) group.getSelectedToggle().getUserData();
         ctx.attempt(() -> {
-            List<Room> rooms = ctx.lodge().rooms();
-            Map<Long, Reservation> inHouse = new java.util.HashMap<>();
+            rooms = ctx.lodge().rooms();
+            Map<Long, Reservation> guests = new java.util.HashMap<>();
             if (ctx.can(Permission.MANAGE_RESERVATIONS)) {   // guest names are not for housekeeping screens
                 for (Reservation r : ctx.lodge().reservationsBetween(ctx.lodge().today(), ctx.lodge().today().plusDays(1))) {
-                    if (r.status() == ReservationStatus.CHECKED_IN) inHouse.put(r.room().id(), r);
+                    if (r.status() == ReservationStatus.CHECKED_IN) guests.put(r.room().id(), r);
                 }
             }
-            Map<RoomStatus, Integer> byStatus = new EnumMap<>(RoomStatus.class);
-            for (RoomStatus s : RoomStatus.values()) byStatus.put(s, 0);
-            tiles.getChildren().clear();
-            group.getToggles().clear();
-            for (Room room : rooms) {
-                byStatus.merge(room.status(), 1, Integer::sum);
+            inHouse = guests;
+            buildFilters();
+            showTiles();
+        });
+    }
+
+    /** One choice in the Show list: a status (null for all rooms) and how many rooms have it. */
+    private record Filter(RoomStatus status, int count) {
+        @Override
+        public String toString() {
+            return (status == null ? "All rooms" : status.toString()) + " (" + count + ")";
+        }
+    }
+
+    /** All rooms, then each status, with up-to-date counts. The chosen one stays chosen. */
+    private void buildFilters() {
+        Map<RoomStatus, Integer> byStatus = new EnumMap<>(RoomStatus.class);
+        for (RoomStatus s : RoomStatus.values()) byStatus.put(s, 0);
+        for (Room room : rooms) byStatus.merge(room.status(), 1, Integer::sum);
+
+        List<Filter> choices = new java.util.ArrayList<>();
+        choices.add(new Filter(null, rooms.size()));
+        for (RoomStatus s : RoomStatus.values()) {
+            choices.add(new Filter(s, byStatus.get(s)));
+        }
+        filter.getItems().setAll(choices);
+        filter.setValue(choices.stream().filter(f -> f.status() == shown).findFirst().orElseThrow());
+    }
+
+    /** The tiles for the rooms the filter lets through. A hidden room cannot stay selected. */
+    private void showTiles() {
+        Long selectedId = group.getSelectedToggle() == null ? null : (Long) group.getSelectedToggle().getUserData();
+        tiles.getChildren().clear();
+        group.getToggles().clear();
+        for (Room room : rooms) {
+            if (shown == null || room.status() == shown) {
                 tiles.getChildren().add(tile(room, inHouse.get(room.id()), selectedId));
             }
-            counts.getChildren().clear();
-            for (RoomStatus s : RoomStatus.values()) {
-                counts.getChildren().add(Ui.chip(s + ": " + byStatus.get(s), s.styleClass()));
-            }
-        });
+        }
+        if (tiles.getChildren().isEmpty()) {
+            Label none = new Label("No rooms are " + shown.toString().toLowerCase() + " right now.");
+            none.getStyleClass().add("hint");
+            tiles.getChildren().add(none);
+        }
     }
 
     private Node tile(Room room, Reservation guest, Long selectedId) {
@@ -156,6 +206,36 @@ public class RoomsPage implements Page {
         refresh();
     }
 
+    private void editRoom() {
+        Room room = selectedRoom();
+        if (room == null) {
+            return;
+        }
+        FormDialog form = new FormDialog(ctx.owner(), ctx.theme(), "Edit room", "Room " + room.number(),
+                "Save room", "Cancel");
+        TextField number = form.add("Room number", new TextField(room.number()));
+        ComboBox<RoomType> type = form.add("Type", new ComboBox<>(FXCollections.observableArrayList(RoomType.values())));
+        type.setValue(room.type());
+        form.addNote("Bookings already made keep the price they were booked at.");
+        form.onSubmit(() -> ctx.lodge().updateRoom(ctx.session(), room, number.getText(), type.getValue()));
+        if (form.showAndWait()) {
+            ctx.success("Room " + number.getText().trim() + " saved.");
+        }
+        refresh();
+    }
+
+    private void deleteRoom() {
+        Room room = selectedRoom();
+        if (room == null || !Ui.confirm(ctx.owner(), ctx.theme(), "Delete room " + room.number() + "?",
+                "The room is removed from the lodge. This cannot be undone.", "Delete room")) {
+            return;
+        }
+        if (ctx.attempt(() -> ctx.lodge().deleteRoom(ctx.session(), room))) {
+            ctx.success("Room " + room.number() + " deleted.");
+        }
+        refresh();
+    }
+
     private void editRates() {
         FormDialog form = new FormDialog(ctx.owner(), ctx.theme(), "Rates & VAT", "Prices per night (VAT excluded)",
                 "Save prices", "Cancel");
@@ -170,7 +250,7 @@ public class RoomsPage implements Page {
         form.onSubmit(() -> {
             Map<RoomType, BigDecimal> rates = new EnumMap<>(RoomType.class);
             for (RoomType t : RoomType.values()) {
-                rates.put(t, FolioWindow.parseAmount(fields.get(t).getText()));
+                rates.put(t, Ui.amount(fields.get(t).getText()));
             }
             String v = vat.getText().trim();
             if (!v.matches("\\d{1,2}(\\.\\d{1,2})?")) {

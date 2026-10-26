@@ -18,6 +18,7 @@ import lodgebilling.controller.PageContext;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationStatus;
+import lodgebilling.model.security.Permission;
 import lodgebilling.view.Ui;
 
 import java.math.BigDecimal;
@@ -57,34 +58,38 @@ public class StaysPage implements Page {
     private final ComboBox<Filter> filter = new ComboBox<>(FXCollections.observableArrayList(Filter.values()));
     private final TextField search = new TextField();
     private final VBox root;
+    // Read from the database once per refresh; the filter and search only narrow this list
+    private List<Reservation> all = List.of();
     private Map<Long, FolioSummary> sums = Map.of();
 
     public StaysPage(PageContext ctx) {
         this.ctx = ctx;
         filter.setValue(Filter.CURRENT);
-        filter.valueProperty().addListener((o, a, b) -> refresh());
+        filter.valueProperty().addListener((o, a, b) -> applyFilter());
         search.setPromptText("Search guest, company, room or BK-number");
         search.setPrefWidth(280);
-        search.textProperty().addListener((o, a, b) -> refresh());
+        search.textProperty().addListener((o, a, b) -> applyFilter());
 
         // New booking and Walk-in are in the sidebar; these act on the selected stay
         Button open = Ui.compact("Open folio", this::openFolio);
+        Button pay = Ui.compact("Take payment", this::takePayment);
         Button in = Ui.compact("Check in", this::checkIn);
         Button out = Ui.compact("Check out", this::checkOut);
         Button cancel = Ui.compact("Cancel booking", this::cancelBooking);
         cancel.getStyleClass().add("danger");
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, r) -> {
             open.setDisable(r == null);
+            pay.setDisable(r == null || !ctx.can(Permission.POST_FOLIO) || !owes(r));
             in.setDisable(r == null || r.status() != ReservationStatus.BOOKED);
             out.setDisable(r == null || r.status() != ReservationStatus.CHECKED_IN);
             cancel.setDisable(r == null || r.status() != ReservationStatus.BOOKED);
         });
-        for (Button b : List.of(open, in, out, cancel)) {
+        for (Button b : List.of(open, pay, in, out, cancel)) {
             b.setDisable(true);
         }
 
         buildTable();
-        HBox bar = Ui.row(Ui.fixed("Show"), filter, search, Ui.spacer(), open, in, out, cancel);
+        HBox bar = Ui.row(Ui.fixed("Show"), filter, search, Ui.spacer(), open, pay, in, out, cancel);
         VBox.setVgrow(table, Priority.ALWAYS);
         root = new VBox(12, bar, table);
         root.setPadding(new Insets(16, 20, 16, 20));
@@ -98,15 +103,25 @@ public class StaysPage implements Page {
     @Override
     public void refresh() {
         ctx.attempt(() -> {
-            String q = search.getText() == null ? "" : search.getText().trim().toLowerCase(Locale.ROOT);
-            List<Reservation> rows = ctx.lodge().reservations().stream()
-                    .filter(filter.getValue().test)
-                    .filter(r -> q.isEmpty() || (r.guestName() + " " + r.company() + " " + r.room().number()
-                            + " " + r.reference()).toLowerCase(Locale.ROOT).contains(q))
-                    .toList();
-            sums = ctx.lodge().summaries(rows);
-            table.setItems(FXCollections.observableArrayList(rows));
+            all = ctx.lodge().reservations();
+            sums = ctx.lodge().summaries(all);
+            applyFilter();
         });
+    }
+
+    /** Narrows the loaded stays to the filter and search text, without going back to the database. */
+    private void applyFilter() {
+        String q = search.getText() == null ? "" : search.getText().trim().toLowerCase(Locale.ROOT);
+        table.setItems(FXCollections.observableArrayList(all.stream()
+                .filter(filter.getValue().test)
+                .filter(r -> q.isEmpty() || (r.guestName() + " " + r.company() + " " + r.room().number()
+                        + " " + r.reference()).toLowerCase(Locale.ROOT).contains(q))
+                .toList()));
+    }
+
+    private boolean owes(Reservation r) {
+        FolioSummary s = sums.get(r.id());
+        return s != null && r.status() != ReservationStatus.CANCELLED && s.balance().signum() > 0;
     }
 
     private void buildTable() {
@@ -160,6 +175,14 @@ public class StaysPage implements Page {
         Reservation r = selected();
         if (r != null) {
             new FolioWindow(ctx, r.id()).showAndWait();
+            refresh();
+        }
+    }
+
+    private void takePayment() {
+        Reservation r = selected();
+        if (r != null) {
+            ctx.takePayment(ctx.owner(), r.id());
             refresh();
         }
     }

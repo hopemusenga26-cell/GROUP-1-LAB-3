@@ -11,6 +11,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,15 +71,28 @@ public class SqliteFolioDao implements FolioDao {
         }
     }
 
-    /** Every line of every folio, grouped by reservation: one query instead of one per stay (no N+1). */
+    /**
+     * The lines of the given stays, grouped by reservation: one query instead of one per
+     * stay (no N+1), and without reading the folios of stays nobody asked about.
+     */
     @Override
-    public Map<Long, List<FolioEntry>> findAllGrouped() {
+    public Map<Long, List<FolioEntry>> findForReservations(Collection<Long> reservationIds) {
         Map<Long, List<FolioEntry>> map = new HashMap<>();
-        String sql = "SELECT " + COLUMNS + " FROM folio_entries ORDER BY id";
-        try (Statement st = db.createStatement(); ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) {
-                FolioEntry e = map(rs);
-                map.computeIfAbsent(e.reservationId(), k -> new ArrayList<>()).add(e);
+        if (reservationIds.isEmpty()) {
+            return map;
+        }
+        String marks = String.join(", ", Collections.nCopies(reservationIds.size(), "?"));
+        String sql = "SELECT " + COLUMNS + " FROM folio_entries WHERE reservation_id IN (" + marks + ") ORDER BY id";
+        try (PreparedStatement ps = db.prepareStatement(sql)) {
+            int i = 1;
+            for (long id : reservationIds) {
+                ps.setLong(i++, id);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    FolioEntry e = map(rs);
+                    map.computeIfAbsent(e.reservationId(), k -> new ArrayList<>()).add(e);
+                }
             }
             return map;
         } catch (SQLException e) {

@@ -19,17 +19,19 @@ public class AppToolBar extends HBox {
 
     private final Button receiptButton;
     private final Button printButton;
+    private final Button payButton;
     private final Button deleteButton;
 
     public AppToolBar(BillingActions actions, BillingModel model) {
         super(8);
         receiptButton = Ui.compact("View receipt", actions::viewReceipt);
         printButton = Ui.compact("Print receipt", actions::printReceipt);
+        payButton = Ui.compact("Record payment", actions::recordPayment);
         deleteButton = Ui.compact("Delete receipt", actions::deleteSelected);
         deleteButton.getStyleClass().add("danger");
 
         setAlignment(Pos.CENTER_RIGHT);
-        getChildren().addAll(receiptButton, printButton);
+        getChildren().addAll(receiptButton, printButton, payButton);
         if (model.session().has(Permission.DELETE_BILL)) {
             getChildren().add(deleteButton);
         }
@@ -37,13 +39,13 @@ public class AppToolBar extends HBox {
 
     /** Greys the buttons out while there is no row to act on. */
     public void disableWhen(ObservableBooleanValue nothingSelected) {
-        for (Button b : List.of(receiptButton, printButton, deleteButton)) {
+        for (Button b : List.of(receiptButton, printButton, payButton, deleteButton)) {
             b.disableProperty().bind(nothingSelected);
         }
     }
 
     /** True for the buttons that act on the selected table row. */
     public boolean actsOnSelection(Node node) {
-        return node == receiptButton || node == printButton || node == deleteButton;
+        return node == receiptButton || node == printButton || node == payButton || node == deleteButton;
     }
 }

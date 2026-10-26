@@ -3,6 +3,7 @@ package lodgebilling.view.pages;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
@@ -20,6 +21,7 @@ import lodgebilling.model.DashboardData;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.RoomStatus;
+import lodgebilling.model.StatusMessage;
 import lodgebilling.model.security.Permission;
 import lodgebilling.view.Ui;
 
@@ -45,15 +47,31 @@ public class DashboardPage implements Page {
     private final HBox metrics = new HBox(14);
     private final TableView<Reservation> arrivals = stayTable("No arrivals left today.");
     private final TableView<Reservation> departures = stayTable("No departures left today.");
+    // What the last action on each list did, shown under that list rather than in the status bar
+    private final Label arrivalNote = tableNote();
+    private final Label departureNote = tableNote();
     private final FlowPane roomChips = new FlowPane(8, 8);
     private final VBox activity = new VBox(6);
     private final ScrollPane root;
 
     public DashboardPage(PageContext ctx) {
         this.ctx = ctx;
-        // "Due" rather than "today": late arrivals and departures stay on the lists
-        VBox arrivalsCard = Ui.card("Arrivals due", arrivals);
-        VBox departuresCard = Ui.card("Departures due", departures);
+        // "Due" rather than "today": late arrivals and departures stay on the lists.
+        // The day's main jobs are done right here, on the selected guest.
+        List<Button> arrivalActions = List.of();
+        List<Button> departureActions = List.of();
+        if (ctx.can(Permission.MANAGE_RESERVATIONS)) {
+            Button checkIn = Ui.compact("Check in", () -> under(arrivalNote, () -> withSelected(arrivals, this::checkIn)));
+            Button pay = Ui.compact("Take payment", () -> under(departureNote, () -> withSelected(departures,
+                    r -> ctx.takePayment(ctx.owner(), r.id()))));
+            Button checkOut = Ui.compact("Check out", () -> under(departureNote, () -> withSelected(departures, ctx::checkOut)));
+            pay.setVisible(ctx.can(Permission.POST_FOLIO));
+            pay.managedProperty().bind(pay.visibleProperty());
+            arrivalActions = List.of(checkIn);
+            departureActions = List.of(pay, checkOut);
+        }
+        VBox arrivalsCard = Ui.card("Arrivals due", arrivalActions, arrivals, arrivalNote);
+        VBox departuresCard = Ui.card("Departures due", departureActions, departures, departureNote);
         HBox.setHgrow(arrivalsCard, Priority.ALWAYS);
         HBox.setHgrow(departuresCard, Priority.ALWAYS);
         arrivalsCard.setPrefWidth(400);
@@ -68,6 +86,9 @@ public class DashboardPage implements Page {
         VBox content = new VBox(14, metrics, new HBox(14, arrivalsCard, departuresCard),
                 new HBox(14, rooms, feed));
         content.setPadding(new Insets(16, 20, 20, 20));
+        // The dashboard alone has the lodge photo behind its figures (see lodge.css)
+        content.getStyleClass().add("dashboard");
+        metrics.getStyleClass().add("metric-strip");
         root = new ScrollPane(content);
         root.setFitToWidth(true);
         root.getStyleClass().add("main-scroll");
@@ -109,6 +130,50 @@ public class DashboardPage implements Page {
                 activity.getChildren().add(new Label("Nothing yet."));
             }
         });
+    }
+
+    /** A message line under a list, hidden until there is something to say. */
+    private static Label tableNote() {
+        Label note = new Label();
+        note.setWrapText(true);
+        note.setMaxWidth(Double.MAX_VALUE);
+        note.managedProperty().bind(note.visibleProperty());
+        note.setVisible(false);
+        return note;
+    }
+
+    /** Runs an action on a list with its messages shown in that list's note. */
+    private void under(Label note, Runnable step) {
+        note.setVisible(false);
+        ctx.reportingTo(message -> show(note, message), step);
+    }
+
+    private static void show(Label note, StatusMessage message) {
+        note.setText(message.text());
+        note.getStyleClass().setAll("label", "status");
+        switch (message.kind()) {
+            case ERROR -> note.getStyleClass().add("error");
+            case SUCCESS -> note.getStyleClass().add("success");
+            case INFO -> { }
+        }
+        note.setVisible(true);
+    }
+
+    /** Runs an action on the guest selected in a table, then shows the new state of the day. */
+    private void withSelected(TableView<Reservation> table, java.util.function.Consumer<Reservation> action) {
+        Reservation r = table.getSelectionModel().getSelectedItem();
+        if (r == null) {
+            ctx.error("Select a guest in the list first.");
+            return;
+        }
+        action.accept(r);
+        refresh();
+    }
+
+    private void checkIn(Reservation r) {
+        if (ctx.attempt(() -> ctx.lodge().checkIn(ctx.session(), r.id()))) {
+            ctx.success(r.guestName() + " checked in to room " + r.room().number() + ".");
+        }
     }
 
     private TableView<Reservation> stayTable(String empty) {
