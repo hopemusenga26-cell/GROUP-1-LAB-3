@@ -1,23 +1,37 @@
 package lodgebilling.view;
 
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import lodgebilling.controller.BillingActions;
 import lodgebilling.model.Bill;
 import lodgebilling.model.BillingModel;
 import lodgebilling.model.Money;
+import lodgebilling.model.service.UserFacingException;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 
 /** The pop-up windows of the receipts list (receipt, delete confirmation, password), owned by the main window. */
 public class Dialogs {
+
+    private static final DateTimeFormatter BACKUP_TIME = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm")
+            .withZone(ZoneId.systemDefault());
 
     private final Stage owner;
     private final BillingModel model;
@@ -27,6 +41,40 @@ public class Dialogs {
         this.owner = owner;
         this.model = model;
         this.actions = actions;
+    }
+
+    /** What to do with the backup picked in {@link #chooseBackup}; throw to keep the window open. */
+    @FunctionalInterface
+    public interface Restore {
+        void restore(Path backup) throws UserFacingException;
+    }
+
+    /** Lets an admin pick a backup to restore, newest first. True if one was chosen and accepted. */
+    public boolean chooseBackup(List<Path> backups, Restore restore) {
+        FormDialog form = new FormDialog(owner, model.themeProperty().get(), "Restore a backup",
+                "Restore a backup", "Restore on next start", "Cancel");
+        ComboBox<Path> choice = form.add("Backup", new ComboBox<>(FXCollections.observableArrayList(backups)));
+        choice.setConverter(new StringConverter<>() {
+            @Override public String toString(Path p) { return p == null ? "" : describe(p); }
+            @Override public Path fromString(String s) { return null; }
+        });
+        if (!backups.isEmpty()) {
+            choice.setValue(backups.get(0));
+        }
+        form.addNote("Everything entered after the backup was made will be replaced. The data in use now "
+                + "is kept in the backups folder, so this can be undone. The backup is put in place the next "
+                + "time Lodge Billing starts.");
+        form.onSubmit(() -> restore.restore(choice.getValue()));
+        return form.showAndWait();
+    }
+
+    private static String describe(Path backup) {
+        try {
+            return backup.getFileName() + "  (" + BACKUP_TIME.format(Files.getLastModifiedTime(backup).toInstant())
+                    + ", " + Math.max(1, Files.size(backup) / 1024) + " KB)";
+        } catch (IOException e) {
+            return backup.getFileName().toString();
+        }
     }
 
     public void showReceipt(Bill bill) {
@@ -39,7 +87,8 @@ public class Dialogs {
         scroll.setPrefViewportHeight(600);
 
         ButtonType print = new ButtonType("Print receipt", ButtonBar.ButtonData.LEFT);
-        Alert dialog = new Alert(Alert.AlertType.INFORMATION, "", print, ButtonType.CLOSE);
+        ButtonType pdf = new ButtonType("Save as PDF", ButtonBar.ButtonData.LEFT);
+        Alert dialog = new Alert(Alert.AlertType.INFORMATION, "", print, pdf, ButtonType.CLOSE);
         dialog.setTitle("Receipt " + bill.getReceiptNumber());
         dialog.setHeaderText(null);
         dialog.setGraphic(null);
@@ -53,12 +102,21 @@ public class Dialogs {
             e.consume();
             actions.printReceiptFor(bill);
         });
+        dialog.getDialogPane().lookupButton(pdf).addEventFilter(ActionEvent.ACTION, e -> {
+            e.consume();
+            actions.saveReceiptPdf(bill);
+        });
         show(dialog);
     }
 
     /** Sends the receipt to a printer the user picks. Returns false if cancelled or it failed. */
     public boolean printReceipt(Bill bill) {
         return ReceiptView.print(owner, model.themeProperty().get(), bill);
+    }
+
+    /** Saves the receipt as a PDF where the user picks. Returns the file, or null if cancelled or it failed. */
+    public File saveReceiptPdf(Bill bill) {
+        return ReceiptView.savePdf(owner, model.themeProperty().get(), bill);
     }
 
     /** Asks the user to confirm; true only if they chose Delete. */

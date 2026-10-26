@@ -21,8 +21,13 @@ public enum Permission {
     UPDATE_ROOM_STATUS,    // clean / dirty / maintenance
     MANAGE_ROOMS,          // add rooms, change rates and VAT
 
+    // End of day
+    CASH_UP,               // count the drawer and close the day's takings
+    REOPEN_DAY,            // undo a close, so a closed day's money can be changed again
+
     // Admin
     VIEW_REPORTS,
     MANAGE_USERS,
-    VIEW_AUDIT_LOG
+    VIEW_AUDIT_LOG,
+    MANAGE_BACKUPS         // back up now and restore a backup
 }

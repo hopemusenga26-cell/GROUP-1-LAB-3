@@ -125,7 +125,18 @@ public final class Database implements AutoCloseable {
             paid_at   TEXT    NOT NULL,
             paid_by   TEXT    NOT NULL
         )""",
-        "CREATE INDEX IF NOT EXISTS idx_bill_payments_bill ON bill_payments(bill_id)"
+        "CREATE INDEX IF NOT EXISTS idx_bill_payments_bill ON bill_payments(bill_id)",
+        // A day whose takings were counted and signed off. While a day is here,
+        // no payment can be added to it or voided from it; an admin can reopen it.
+        """
+        CREATE TABLE IF NOT EXISTS day_closings (
+            business_date  TEXT PRIMARY KEY,
+            closed_by      TEXT NOT NULL,
+            closed_at      TEXT NOT NULL,
+            expected_cash  TEXT NOT NULL,
+            counted_cash   TEXT NOT NULL,
+            note           TEXT NOT NULL DEFAULT ''
+        )"""
     };
 
     private final Connection connection;
@@ -219,6 +230,19 @@ public final class Database implements AutoCloseable {
             }
         } catch (SQLException e) {
             throw new DataException("The database transaction failed", e);
+        }
+    }
+
+    /**
+     * Writes a copy of the whole database to a new file (SQLite's VACUUM INTO). The copy
+     * is consistent even while the app is in use, which copying the file itself is not.
+     */
+    public void copyTo(Path file) {
+        try (java.sql.PreparedStatement ps = connection.prepareStatement("VACUUM INTO ?")) {
+            ps.setString(1, file.toAbsolutePath().toString());
+            ps.execute();
+        } catch (SQLException e) {
+            throw new DataException("Could not copy the database to " + file, e);
         }
     }
 

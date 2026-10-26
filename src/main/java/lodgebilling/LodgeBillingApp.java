@@ -19,6 +19,7 @@ import lodgebilling.dao.Database;
 import lodgebilling.dao.LegacyReceiptImporter;
 import lodgebilling.dao.SqliteAuditLogDao;
 import lodgebilling.dao.SqliteBillDao;
+import lodgebilling.dao.SqliteCashUpDao;
 import lodgebilling.dao.SqliteFolioDao;
 import lodgebilling.dao.SqliteReportDao;
 import lodgebilling.dao.SqliteReservationDao;
@@ -33,12 +34,15 @@ import lodgebilling.model.security.PasswordHasher;
 import lodgebilling.model.security.Session;
 import lodgebilling.model.service.AuthException;
 import lodgebilling.model.service.AuthService;
+import lodgebilling.model.service.BackupService;
 import lodgebilling.view.AuthCard;
 import lodgebilling.view.LoginView;
 import lodgebilling.view.SetupView;
 import lodgebilling.view.Styles;
 
+import java.nio.file.Path;
 import java.time.Clock;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -65,6 +69,7 @@ public class LodgeBillingApp extends Application {
     private AuditLogDao audit;
     private BillDao bills;
     private LodgeService lodge;
+    private BackupService backups;
     private BillingController current;
     private AuthCard authCard;           // the sign-in or setup screen while it is showing
     // Kept across logins, and shared with the sign-in screen's light/dark switch
@@ -73,8 +78,12 @@ public class LodgeBillingApp extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
+        Path file = Database.defaultPath();
+        Optional<String> restored;
         try {
-            database = Database.open(Database.defaultPath());
+            // A backup chosen for restoring last time replaces the data before it is opened
+            restored = BackupService.applyPendingRestore(file, Clock.systemDefaultZone());
+            database = Database.open(file);
         } catch (DataException e) {
             LOG.log(Level.SEVERE, "Could not open the database", e);
             Alert alert = new Alert(Alert.AlertType.ERROR, e.getMessage() + "\n\n" + e.getCause().getMessage());
@@ -91,7 +100,15 @@ public class LodgeBillingApp extends Application {
         // Business dates (arrivals, check-out) use the computer's own time zone
         lodge = new LodgeService(database, new SqliteRoomDao(database), new SqliteReservationDao(database),
                 new SqliteFolioDao(database), new SqliteSettingsDao(database), new SqliteReportDao(database),
-                audit, Clock.systemDefaultZone());
+                new SqliteCashUpDao(database), audit, Clock.systemDefaultZone());
+        backups = new BackupService(database, file, audit, Clock.systemDefaultZone());
+        restored.ifPresent(backups::recordRestore);
+        try {
+            backups.dailyBackup();
+        } catch (DataException e) {
+            // A missed backup must not stop the desk from working; the next start tries again
+            LOG.log(Level.WARNING, "The daily backup failed", e);
+        }
 
         // Open at a comfortable size, but never bigger than the screen (minus the taskbar)
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
@@ -111,6 +128,13 @@ public class LodgeBillingApp extends Application {
             showLogin();
         }
         stage.show();
+        restored.ifPresent(what -> {
+            Alert done = new Alert(Alert.AlertType.INFORMATION, "The data now comes from the backup: " + what
+                    + ".\n\nThe data it replaced is kept in " + backups.folder() + " as before-restore-....db.");
+            done.initOwner(stage);
+            done.setHeaderText("Backup restored");
+            done.showAndWait();
+        });
     }
 
     @Override
@@ -150,7 +174,7 @@ public class LodgeBillingApp extends Application {
     private void signedIn(User user) {
         Session session = new Session(user);
         BillingModel model = new BillingModel(bills, audit, session, theme.get());
-        current = new BillingController(model, stage, auth, audit, lodge, this::logout);
+        current = new BillingController(model, stage, auth, audit, lodge, backups, this::logout);
         authCard = null;
         scene.setRoot(current.view());
         current.view().install(scene);

@@ -1,8 +1,10 @@
 package lodgebilling.model.service;
 
 import lodgebilling.dao.AuditLogDao;
+import lodgebilling.dao.CashUpDao;
 import lodgebilling.model.AuditAction;
 import lodgebilling.model.Bill;
+import lodgebilling.model.CashUp;
 import lodgebilling.dao.Database;
 import lodgebilling.dao.FolioDao;
 import lodgebilling.dao.ReportDao;
@@ -12,9 +14,11 @@ import lodgebilling.dao.RoomDao;
 import lodgebilling.dao.SettingsDao;
 import lodgebilling.model.ChargeCategory;
 import lodgebilling.model.DashboardData;
+import lodgebilling.model.DayClosing;
 import lodgebilling.model.FolioCalculator;
 import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
+import lodgebilling.model.GuestHistory;
 import lodgebilling.model.Money;
 import lodgebilling.model.Payer;
 import lodgebilling.model.PaymentLine;
@@ -33,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -52,6 +57,9 @@ public class LodgeService {
     public static final BigDecimal DEFAULT_VAT = new BigDecimal("16");
     public static final int MAX_NIGHTS = 60;
     public static final BigDecimal MAX_AMOUNT = new BigDecimal("1000000");
+    public static final int SEARCH_LIMIT = 30;
+
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM yyyy");
 
     private static final String NAME_PATTERN = "\\p{L}+([ '’\\-.]\\p{L}+)*";
     private static final String PHONE_PATTERN = "[+0-9 ()\\-]{0,20}";
@@ -65,6 +73,7 @@ public class LodgeService {
     private final FolioDao folios;
     private final SettingsDao settings;
     private final ReportDao reports;
+    private final CashUpDao cashUps;
     private final AuditLogDao audit;
     private final Clock clock;
     private final RateCard rateCard;
@@ -74,13 +83,15 @@ public class LodgeService {
      * The database is needed only to group several writes into one transaction.
      */
     public LodgeService(Database database, RoomDao rooms, ReservationDao reservations, FolioDao folios,
-                        SettingsDao settings, ReportDao reports, AuditLogDao audit, Clock clock) {
+                        SettingsDao settings, ReportDao reports, CashUpDao cashUps, AuditLogDao audit,
+                        Clock clock) {
         this.database = database;
         this.rooms = rooms;
         this.reservations = reservations;
         this.folios = folios;
         this.settings = settings;
         this.reports = reports;
+        this.cashUps = cashUps;
         this.audit = audit;
         this.clock = clock;
         seedIfEmpty();
@@ -388,6 +399,9 @@ public class LodgeService {
             }
             session.require(Permission.FORCE_CHECKOUT);
         }
+        if (summary.balance().signum() < 0) {
+            checkDayOpen(today());   // the change given back comes out of today's takings
+        }
         database.inTransaction(() -> {
             if (!newCheckOut.equals(r.checkOut())) {
                 reservations.updateDetails(id, r.guestName(), r.guestPhone(), r.company(), r.companyPaysRoom(),
@@ -515,6 +529,7 @@ public class LodgeService {
         if (amount.compareTo(owed) > 0) {
             throw new LodgeException(r.payerName(payer) + " owes only " + Money.format(owed) + ".");
         }
+        checkDayOpen(today());
         FolioEntry e = folios.insert(reservationId, FolioEntry.Kind.PAYMENT, method.name(), clean(reference),
                 Money.scale(amount), payer, now(), session.username());
         audit.record(session.username(), AuditAction.PAYMENT_RECORDED,
@@ -597,6 +612,9 @@ public class LodgeService {
         if (entry.voided()) {
             throw new LodgeException("That line is already void.");
         }
+        if (!entry.isCharge()) {
+            checkDayOpen(entry.postedAt().toLocalDate());
+        }
         folios.voidEntry(entry.id(), why);
         audit.record(session.username(), AuditAction.ENTRY_VOIDED, Reservation.referenceFor(entry.reservationId())
                 + " " + entry.kind() + " " + Money.format(entry.amount()) + ": " + why);
@@ -653,11 +671,139 @@ public class LodgeService {
         return owing;
     }
 
+    /**
+     * Stays that match every word typed, each word against the guest's name, phone, company,
+     * booking number (BK-0042, or just 42) or room number. Guests in house come first, then
+     * bookings still to arrive, then the rest; newest arrival first within each.
+     */
+    public List<Reservation> search(Session session, String text) {
+        session.require(Permission.MANAGE_RESERVATIONS);
+        List<String> words = text == null ? List.of()
+                : List.of(text.trim().toLowerCase().split("\\s+")).stream().filter(w -> !w.isEmpty()).toList();
+        if (words.isEmpty()) {
+            return List.of();
+        }
+        return reservations.findAll().stream()   // already newest arrival first
+                .filter(r -> words.stream().allMatch(w -> matches(r, w)))
+                .sorted(java.util.Comparator.comparingInt(r -> searchOrder(r.status())))
+                .limit(SEARCH_LIMIT)
+                .toList();
+    }
+
+    private static boolean matches(Reservation r, String word) {
+        if (r.guestName().toLowerCase().contains(word) || r.company().toLowerCase().contains(word)
+                || r.reference().toLowerCase().contains(word) || r.room().number().equalsIgnoreCase(word)) {
+            return true;
+        }
+        // Part of a phone number, however it was written (+260 97..., 097...)
+        String digits = word.replaceAll("\\D", "");
+        return word.matches("[+\\d()-]{3,}") && r.guestPhone().replaceAll("\\D", "").contains(digits);
+    }
+
+    private static int searchOrder(ReservationStatus status) {
+        return switch (status) {
+            case CHECKED_IN -> 0;
+            case BOOKED -> 1;
+            case CHECKED_OUT -> 2;
+            case CANCELLED -> 3;
+        };
+    }
+
+    /**
+     * The earlier stays of the guest with this phone number, so a returning guest's details
+     * can be filled in and any money they still owe is seen before they are booked again.
+     */
+    public GuestHistory guestHistory(Session session, String phone) {
+        session.require(Permission.MANAGE_RESERVATIONS);
+        String key = phoneKey(phone);
+        if (key == null) {
+            return GuestHistory.NONE;
+        }
+        List<Reservation> stays = reservations.findAll().stream()
+                .filter(r -> r.status() != ReservationStatus.CANCELLED && key.equals(phoneKey(r.guestPhone())))
+                .toList();
+        BigDecimal owed = owing(stays).stream().map(f -> f.summary().balance())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new GuestHistory(stays, owed);
+    }
+
+    /**
+     * The last 9 digits of a phone number, the same whether it was typed as +260 97 123 4567
+     * or 0971234567. Null if there are too few digits to tell guests apart.
+     */
+    static String phoneKey(String phone) {
+        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
+        return digits.length() < 9 ? null : digits.substring(digits.length() - 9);
+    }
+
     /** The stays among these that have been billed (in house or gone) and still owe money. */
     private List<Folio> owing(List<Reservation> stays) {
         List<Reservation> billed = stays.stream().filter(r -> r.status() == ReservationStatus.CHECKED_IN
                 || r.status() == ReservationStatus.CHECKED_OUT).toList();
         return folios(billed).stream().filter(f -> f.summary().balance().signum() > 0).toList();
+    }
+
+    // =====================================================================
+    // End of day
+    // =====================================================================
+
+    /** What was taken on that day, by whom and how, and whether the day has been closed. */
+    public CashUp cashUp(Session session, LocalDate date) throws LodgeException {
+        session.require(Permission.CASH_UP);
+        if (date == null) {
+            throw new LodgeException("Choose a day.");
+        }
+        return new CashUp(date, cashUps.takings(date), cashUps.closing(date).orElse(null));
+    }
+
+    /**
+     * Signs the day off after the cash drawer is counted. From then on no payment can be
+     * taken on that day or voided from it, so the figures handed over stay true.
+     * If the count does not match, a note must say why.
+     */
+    public DayClosing closeDay(Session session, LocalDate date, BigDecimal countedCash, String note)
+            throws LodgeException {
+        CashUp day = cashUp(session, date);
+        if (day.isClosed()) {
+            throw new LodgeException(date.format(DAY) + " is already closed.");
+        }
+        if (date.isAfter(today())) {
+            throw new LodgeException("A day can only be closed once it has started.");
+        }
+        if (countedCash == null || countedCash.signum() < 0) {
+            throw new LodgeException("Enter the cash counted in the drawer (0 if none).");
+        }
+        String why = clean(note);
+        DayClosing closing = new DayClosing(date, session.username(), now(), day.expectedCash(),
+                Money.scale(countedCash), why);
+        if (closing.difference().signum() != 0 && why.length() < 3) {
+            throw new LodgeException("The drawer is " + Money.format(closing.difference().abs())
+                    + (closing.difference().signum() < 0 ? " short" : " over") + ". Add a note saying why.");
+        }
+        cashUps.close(closing);
+        audit.record(session.username(), AuditAction.DAY_CLOSED, date + ": expected "
+                + Money.format(closing.expectedCash()) + ", counted " + Money.format(closing.countedCash())
+                + (why.isEmpty() ? "" : " (" + why + ")"));
+        return closing;
+    }
+
+    /** Lets payments on a closed day be corrected. The day then has to be counted and closed again. */
+    public void reopenDay(Session session, LocalDate date) throws LodgeException {
+        session.require(Permission.REOPEN_DAY);
+        if (date == null || cashUps.closing(date).isEmpty()) {
+            throw new LodgeException("That day is not closed.");
+        }
+        cashUps.reopen(date);
+        audit.record(session.username(), AuditAction.DAY_REOPENED, date.toString());
+    }
+
+    /** Refuses a change to a day whose takings have been counted and closed. */
+    public void checkDayOpen(LocalDate date) throws LodgeException {
+        DayClosing closed = cashUps.closing(date).orElse(null);
+        if (closed != null) {
+            throw new LodgeException("The takings for " + date.format(DAY) + " were closed by "
+                    + closed.closedBy() + ". An admin must reopen the day first.");
+        }
     }
 
     public void recordExport(Session session, String what) {

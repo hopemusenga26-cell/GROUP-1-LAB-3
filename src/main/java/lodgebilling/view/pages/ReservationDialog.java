@@ -10,6 +10,7 @@ import javafx.scene.control.TextField;
 import lodgebilling.controller.PageContext;
 import lodgebilling.model.Bill;
 import lodgebilling.model.FolioCalculator;
+import lodgebilling.model.GuestHistory;
 import lodgebilling.model.Money;
 import lodgebilling.model.Payer;
 import lodgebilling.model.PaymentLine;
@@ -64,6 +65,12 @@ public final class ReservationDialog {
         guest.setPromptText("e.g., John Phiri");
         TextField phone = form.add("Phone", new TextField());
         phone.setPromptText("Optional, e.g. +260 97 123 4567");
+        // A returning guest is recognised by phone: their details are filled in and their history shown
+        Label known = form.add("", new Label());
+        known.setWrapText(true);
+        known.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        known.managedProperty().bind(known.visibleProperty());
+        known.setVisible(false);
         TextField company = form.add("Company", new TextField());
         company.setPromptText("Optional, for business guests");
         CheckBox companyPays = form.add("", new CheckBox("Company pays the room"));
@@ -108,6 +115,9 @@ public final class ReservationDialog {
             arrive.setDisable(mode == Mode.WALK_IN);
         }
         companyPays.disableProperty().bind(company.textProperty().isEmpty());
+        if (existing == null) {
+            phone.textProperty().addListener((o, a, typed) -> showHistory(ctx, typed, known, guest, company));
+        }
 
         long ignoreId = existing == null ? 0 : existing.id();
         Room wanted = existing != null ? existing.room() : room;
@@ -165,6 +175,32 @@ public final class ReservationDialog {
             };
         });
         return form.showAndWait() ? Optional.ofNullable(saved[0]) : Optional.empty();
+    }
+
+    /** Fills in a returning guest's name and company (if not typed yet) and says when they last stayed. */
+    private static void showHistory(PageContext ctx, String phone, Label known, TextField guest, TextField company) {
+        GuestHistory history = ctx.lodge().guestHistory(ctx.session(), phone);
+        if (history.isEmpty()) {
+            known.setVisible(false);
+            return;
+        }
+        Reservation last = history.last();
+        if (guest.getText().isBlank()) {
+            guest.setText(last.guestName());
+        }
+        if (company.getText().isBlank()) {
+            company.setText(last.company());
+        }
+        int count = history.stays().size();
+        String text = "Returning guest: " + count + (count == 1 ? " earlier stay" : " earlier stays")
+                + ", last in room " + last.room().number() + " from " + last.checkIn().format(Ui.DATE) + ".";
+        known.getStyleClass().setAll("label", "status");
+        if (history.owed().signum() > 0) {
+            text += " Still owes " + Money.format(history.owed()) + " from before.";
+            known.getStyleClass().add("error");
+        }
+        known.setText(text);
+        known.setVisible(true);
     }
 
     private static String estimate(LodgeService lodge, Reservation existing, Room room, LocalDate in, LocalDate out) {

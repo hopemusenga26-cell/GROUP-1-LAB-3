@@ -123,6 +123,7 @@ public final class Ui {
             }
         });
         col.setStyle("-fx-alignment: CENTER-RIGHT;");
+        col.getStyleClass().add("money");   // puts the heading on the right too
         return col;
     }
 

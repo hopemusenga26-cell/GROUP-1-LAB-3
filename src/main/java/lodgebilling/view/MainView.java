@@ -26,15 +26,18 @@ import lodgebilling.model.BillingModel;
 import lodgebilling.model.security.Permission;
 import lodgebilling.model.service.AuthService;
 import lodgebilling.model.service.LodgeService;
+import lodgebilling.view.pages.CashUpPage;
 import lodgebilling.view.pages.DashboardPage;
 import lodgebilling.view.pages.Page;
 import lodgebilling.view.pages.ReportsPage;
 import lodgebilling.view.pages.ReservationDialog;
 import lodgebilling.view.pages.RoomsPage;
+import lodgebilling.view.pages.SearchDialog;
 import lodgebilling.view.pages.StaffPage;
 import lodgebilling.view.pages.StaysPage;
 import lodgebilling.view.pages.TapeChartPage;
 
+import java.io.File;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -77,8 +80,8 @@ public class MainView extends BorderPane {
         this.table = new BillTableView(model.bills(), actions::viewReceipt, actions::deleteSelected);
         this.toolBar = new AppToolBar(actions, model);
         this.dialogs = new Dialogs(stage, model, actions);
-        this.header = new AppHeader(model, actions);
         this.pageContext = new PageContext(stage, model, lodge, audit, auth);
+        this.header = new AppHeader(model, actions, canSearch() ? this::search : null);
         pageContext.setRefreshCurrentPage(this::refreshCurrent);
         toolBar.disableWhen(table.getSelectionModel().selectedItemProperty().isNull());
         receiptsContent = buildReceiptsContent();
@@ -116,6 +119,7 @@ public class MainView extends BorderPane {
             case TAPE_CHART -> new TapeChartPage(pageContext);
             case STAYS -> new StaysPage(pageContext);
             case ROOMS -> new RoomsPage(pageContext);
+            case CASH_UP -> new CashUpPage(pageContext);
             case REPORTS -> new ReportsPage(pageContext);
             case STAFF -> new StaffPage(pageContext);
             case RECEIPTS -> new Page() {
@@ -185,6 +189,15 @@ public class MainView extends BorderPane {
         return tile;
     }
 
+    /** Search is for the front desk: it opens folios, which housekeeping does not see. */
+    private boolean canSearch() {
+        return pageContext.can(Permission.MANAGE_RESERVATIONS);
+    }
+
+    private void search() {
+        SearchDialog.show(pageContext);
+    }
+
     private void quickBook(ReservationDialog.Mode mode) {
         ReservationDialog.show(pageContext, mode, null, null, null).ifPresent(r -> pageContext.success(
                 (mode == ReservationDialog.Mode.WALK_IN ? r.guestName() + " checked in to room "
@@ -243,6 +256,9 @@ public class MainView extends BorderPane {
             AppPage p = visible.get(i);
             shortcuts.put(KeyCombination.keyCombination("Shortcut+" + (i + 1)), () -> showPage(p));
         }
+        if (canSearch()) {
+            shortcuts.put(KeyCombination.keyCombination("Shortcut+K"), this::search);
+        }
         shortcuts.put(KeyCombination.keyCombination("Shortcut+T"), actions::toggleTheme);
         shortcuts.put(KeyCombination.keyCombination("Shortcut+L"), actions::logout);
         shortcuts.put(KeyCombination.keyCombination("Shortcut+Q"), actions::exit);
@@ -284,8 +300,13 @@ public class MainView extends BorderPane {
 
     public void showReceipt(Bill bill)      { dialogs.showReceipt(bill); }
     public boolean printReceipt(Bill bill)  { return dialogs.printReceipt(bill); }
+    public File saveReceiptPdf(Bill bill)   { return dialogs.saveReceiptPdf(bill); }
     public boolean confirmDelete(Bill bill) { return dialogs.confirmDelete(bill); }
     public boolean changePassword(boolean forced, ChangePasswordDialog.Change change) {
         return dialogs.changePassword(forced, change);
+    }
+
+    public boolean chooseBackup(List<java.nio.file.Path> backups, Dialogs.Restore restore) {
+        return dialogs.chooseBackup(backups, restore);
     }
 }

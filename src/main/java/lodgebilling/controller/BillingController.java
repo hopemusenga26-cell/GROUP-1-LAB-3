@@ -14,11 +14,15 @@ import lodgebilling.model.ValidationException;
 import lodgebilling.model.security.AccessDeniedException;
 import lodgebilling.model.security.Permission;
 import lodgebilling.model.service.AuthService;
+import lodgebilling.model.service.BackupService;
 import lodgebilling.model.service.LodgeException;
 import lodgebilling.model.service.LodgeService;
 import lodgebilling.view.MainView;
 import lodgebilling.view.PaymentDialog;
+import lodgebilling.view.Ui;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,13 +42,15 @@ public class BillingController implements BillingActions {
     private final AuthService auth;
     private final Runnable onLogout;
     private final LodgeService lodge;
+    private final BackupService backups;
 
     /**
      * @param onLogout called after the user logs out, to show the sign-in screen again
      */
     public BillingController(BillingModel model, Stage stage, AuthService auth, AuditLogDao audit,
-                             LodgeService lodge, Runnable onLogout) {
+                             LodgeService lodge, BackupService backups, Runnable onLogout) {
         this.lodge = lodge;
+        this.backups = backups;
         this.model = model;
         this.stage = stage;
         this.auth = auth;
@@ -82,6 +88,15 @@ public class BillingController implements BillingActions {
     public void printReceiptFor(Bill bill) {
         if (view.printReceipt(bill)) {
             model.setStatus(StatusMessage.success("Receipt " + bill.getReceiptNumber() + " sent to the printer."));
+        }
+    }
+
+    /** Saves one bill's receipt as a PDF; used by the receipt window. */
+    @Override
+    public void saveReceiptPdf(Bill bill) {
+        File file = view.saveReceiptPdf(bill);
+        if (file != null) {
+            model.setStatus(StatusMessage.success("Receipt " + bill.getReceiptNumber() + " saved as " + file.getName() + "."));
         }
     }
 
@@ -130,6 +145,7 @@ public class BillingController implements BillingActions {
             throw new LodgeException("Enter the amount being paid.");
         }
         PaymentLine line = lines.get(0);
+        lodge.checkDayOpen(lodge.today());
         try {
             return model.recordPayment(bill, line.method(), line.amount());
         } catch (ValidationException e) {
@@ -191,6 +207,45 @@ public class BillingController implements BillingActions {
                 (current, replacement) -> auth.changeOwnPassword(model.session(), current, replacement));
         if (changed) {
             model.setStatus(StatusMessage.success("Your password has been changed."));
+        }
+    }
+
+    @Override
+    public void backupNow() {
+        try {
+            Path file = backups.backupNow(model.session());
+            model.setStatus(StatusMessage.success("Backup saved as " + file.getFileName() + " in " + file.getParent() + "."));
+        } catch (AccessDeniedException e) {
+            model.setStatus(StatusMessage.error(e.getMessage()));
+        } catch (DataException e) {
+            LOG.log(Level.SEVERE, "Backup failed", e);
+            model.setStatus(StatusMessage.error("Could not make the backup: " + e.getMessage()));
+        }
+    }
+
+    @Override
+    public void restoreBackup() {
+        try {
+            List<Path> all = backups.backups();
+            if (all.isEmpty()) {
+                model.setStatus(StatusMessage.info("There are no backups yet in " + backups.folder() + "."));
+                return;
+            }
+            if (!view.chooseBackup(all, backup -> backups.restoreOnNextStart(model.session(), backup))) {
+                return;
+            }
+        } catch (AccessDeniedException e) {
+            model.setStatus(StatusMessage.error(e.getMessage()));
+            return;
+        } catch (DataException e) {
+            LOG.log(Level.SEVERE, "Listing the backups failed", e);
+            model.setStatus(StatusMessage.error("Could not read the backups: " + e.getMessage()));
+            return;
+        }
+        model.setStatus(StatusMessage.success("The backup will be restored the next time Lodge Billing starts."));
+        if (Ui.ask(stage, theme(), "Close Lodge Billing now?",
+                "The backup is put in place when the app starts again.", "Close now", "Later")) {
+            exit();
         }
     }
 

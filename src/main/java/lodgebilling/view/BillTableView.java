@@ -59,6 +59,7 @@ public class BillTableView extends TableView<Bill> {
         // Every value sits in the middle of its column, under its heading
         for (TableColumn<Bill, ?> col : getColumns()) {
             col.setStyle("-fx-alignment: CENTER;");
+            col.getStyleClass().add("centred");
         }
 
         setItems(bills);

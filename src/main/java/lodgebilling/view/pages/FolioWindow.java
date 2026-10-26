@@ -208,7 +208,8 @@ public class FolioWindow {
             actions.getChildren().add(pay);
         }
         if (r.status() != ReservationStatus.CANCELLED) {
-            actions.getChildren().add(Ui.compact("Print receipt", () -> ctx.printReceipt(stage, reservationId)));
+            actions.getChildren().addAll(Ui.compact("Print receipt", () -> ctx.printReceipt(stage, reservationId)),
+                    Ui.compact("Save as PDF", () -> ctx.saveReceiptPdf(stage, reservationId)));
         }
         if (ctx.can(Permission.VOID_FOLIO_ENTRY)) {
             Button v = Ui.compact("Void line", this::voidLine);

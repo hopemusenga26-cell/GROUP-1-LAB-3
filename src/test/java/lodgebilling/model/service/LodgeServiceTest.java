@@ -2,6 +2,7 @@ package lodgebilling.model.service;
 
 import lodgebilling.dao.Database;
 import lodgebilling.dao.SqliteAuditLogDao;
+import lodgebilling.dao.SqliteCashUpDao;
 import lodgebilling.dao.SqliteFolioDao;
 import lodgebilling.dao.SqliteReportDao;
 import lodgebilling.dao.SqliteReservationDao;
@@ -57,7 +58,8 @@ class LodgeServiceTest {
     /** The service wired to the SQLite DAOs, as the app does it. */
     static LodgeService lodgeService(Database db, Clock clock) {
         return new LodgeService(db, new SqliteRoomDao(db), new SqliteReservationDao(db), new SqliteFolioDao(db),
-                new SqliteSettingsDao(db), new SqliteReportDao(db), new SqliteAuditLogDao(db, clock), clock);
+                new SqliteSettingsDao(db), new SqliteReportDao(db), new SqliteCashUpDao(db),
+                new SqliteAuditLogDao(db, clock), clock);
     }
 
     @BeforeEach

@@ -22,6 +22,7 @@ import lodgebilling.view.PaymentDialog;
 import lodgebilling.view.ReceiptView;
 import lodgebilling.view.Ui;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Consumer;
@@ -149,6 +150,17 @@ public class PageContext {
             var receipt = lodge.stayReceipt(reservationId);
             if (ReceiptView.print(owner, theme(), receipt)) {
                 success("Receipt " + receipt.getReceiptNumber() + " sent to the printer.");
+            }
+        });
+    }
+
+    /** Saves a stay's receipt as a PDF, with its folio's current figures. */
+    public void saveReceiptPdf(Window owner, long reservationId) {
+        attempt(() -> {
+            var receipt = lodge.stayReceipt(reservationId);
+            File file = ReceiptView.savePdf(owner, theme(), receipt);
+            if (file != null) {
+                success("Receipt " + receipt.getReceiptNumber() + " saved as " + file.getName() + ".");
             }
         });
     }

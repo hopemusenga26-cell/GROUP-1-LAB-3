@@ -9,6 +9,7 @@ public enum AppPage {
     STAYS("Stays & folios", Permission.MANAGE_RESERVATIONS),
     RECEIPTS("Receipts", Permission.CREATE_BILL),
     ROOMS("Rooms", Permission.UPDATE_ROOM_STATUS),
+    CASH_UP("Cash-up", Permission.CASH_UP),
     REPORTS("Reports", Permission.VIEW_REPORTS),
     STAFF("Staff", Permission.MANAGE_USERS);
 

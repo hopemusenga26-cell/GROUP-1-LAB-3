@@ -6,9 +6,13 @@ import javafx.print.PageLayout;
 import javafx.print.PrinterJob;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -17,11 +21,21 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
+import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import lodgebilling.model.Bill;
 import lodgebilling.model.Money;
 import lodgebilling.model.Theme;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
 
@@ -30,6 +44,7 @@ public class ReceiptView extends VBox {
 
     private static final double PAPER_WIDTH = 340;
     private static final double TOOTH = 10;
+    private static final double PDF_SCALE = 3;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy  HH:mm");
 
     public ReceiptView(Bill bill) {
@@ -76,16 +91,7 @@ public class ReceiptView extends VBox {
             if (!job.showPrintDialog(owner)) {
                 return false;
             }
-            ReceiptView receipt = new ReceiptView(bill);
-            receipt.setEffect(null);   // the on-screen drop shadow would print as a grey smudge
-            // A scene is needed for the CSS to apply. It is never shown, so it has no size:
-            // a StackPane here would be 0 x 0 and centre the receipt on its corner, pushing
-            // half of it off the page. A Group never resizes or centres its children.
-            Scene scene = new Scene(new Group(receipt));
-            scene.getStylesheets().add(Styles.stylesheet());
-            receipt.applyCss();
-            receipt.autosize();        // its preferred size, about 340 x 584
-            receipt.layout();
+            ReceiptView receipt = offScreen(bill);
 
             // Shrink the receipt to fit the printable area if it is too wide or too tall
             PageLayout page = job.getJobSettings().getPageLayout();
@@ -107,6 +113,71 @@ public class ReceiptView extends VBox {
                 job.cancelJob();
             }
         }
+    }
+
+    /**
+     * Saves a receipt as a one-page PDF where the user picks, e.g. to email it to a guest.
+     * Returns the file, or null if cancelled or it failed.
+     */
+    public static File savePdf(Window owner, Theme theme, Bill bill) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save receipt as PDF");
+        chooser.setInitialFileName("receipt-" + bill.getReceiptNumber() + ".pdf");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF files", "*.pdf"));
+        File file = chooser.showSaveDialog(owner);
+        if (file == null) {
+            return null;
+        }
+        ReceiptView receipt = offScreen(bill);
+        // Drawn at three times screen size so the text stays sharp when printed or zoomed
+        SnapshotParameters params = new SnapshotParameters();
+        params.setFill(Color.WHITE);
+        params.setTransform(new Scale(PDF_SCALE, PDF_SCALE));
+        WritableImage image = receipt.snapshot(params, null);
+
+        // The page is the receipt's own size, in points (1/72 inch), like a till roll
+        float width = (float) receipt.getWidth();
+        float height = (float) receipt.getHeight();
+        try (PDDocument pdf = new PDDocument()) {
+            PDPage page = new PDPage(new PDRectangle(width, height));
+            pdf.addPage(page);
+            PDImageXObject picture = LosslessFactory.createFromImage(pdf, toBufferedImage(image));
+            try (PDPageContentStream content = new PDPageContentStream(pdf, page)) {
+                content.drawImage(picture, 0, 0, width, height);
+            }
+            pdf.save(file);
+            return file;
+        } catch (IOException e) {
+            Ui.info(owner, theme, "Could not save the PDF", e.getMessage());
+            return null;
+        }
+    }
+
+    /** The receipt laid out without being shown, for printing or saving. */
+    private static ReceiptView offScreen(Bill bill) {
+        ReceiptView receipt = new ReceiptView(bill);
+        receipt.setEffect(null);   // the on-screen drop shadow would print as a grey smudge
+        // A scene is needed for the CSS to apply. It is never shown, so it has no size:
+        // a StackPane here would be 0 x 0 and centre the receipt on its corner, pushing
+        // half of it off the page. A Group never resizes or centres its children.
+        Scene scene = new Scene(new Group(receipt));
+        scene.getStylesheets().add(Styles.stylesheet());
+        receipt.applyCss();
+        receipt.autosize();        // its preferred size, about 340 x 584
+        receipt.layout();
+        return receipt;
+    }
+
+    /** Copies JavaFX pixels into an AWT image, which is what PDFBox takes. */
+    private static BufferedImage toBufferedImage(WritableImage image) {
+        int w = (int) image.getWidth();
+        int h = (int) image.getHeight();
+        int[] argb = new int[w * h];
+        PixelReader pixels = image.getPixelReader();
+        pixels.getPixels(0, 0, w, h, PixelFormat.getIntArgbInstance(), argb, 0, w);
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        out.setRGB(0, 0, w, h, argb, 0, w);
+        return out;
     }
 
     // ---------- Sections ----------

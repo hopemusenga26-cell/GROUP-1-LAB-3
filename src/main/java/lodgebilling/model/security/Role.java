@@ -12,7 +12,7 @@ public enum Role {
     STAFF("Front desk", EnumSet.of(
             Permission.CREATE_BILL, Permission.PRINT_RECEIPT,
             Permission.VIEW_DASHBOARD, Permission.MANAGE_RESERVATIONS, Permission.POST_FOLIO,
-            Permission.UPDATE_ROOM_STATUS)),
+            Permission.UPDATE_ROOM_STATUS, Permission.CASH_UP)),
 
     /** General manager: everything. */
     ADMIN("Admin", EnumSet.allOf(Permission.class));
