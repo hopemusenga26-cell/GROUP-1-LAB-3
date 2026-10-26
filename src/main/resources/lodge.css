@@ -396,6 +396,22 @@
     -fx-padding: 1 7 1 7;
 }
 .theme-toggle { -fx-min-width: 96px; }
+/* Settings: theme, password, log out and exit, behind one button like the others */
+.menu-button.settings-menu {
+    -fx-background-color: -paper;
+    -fx-background-radius: 6;
+    -fx-border-color: -line-strong;
+    -fx-border-radius: 6;
+    -fx-padding: 4 12 4 12;
+    -fx-min-height: 32px;
+    -fx-cursor: hand;
+}
+.menu-button.settings-menu > .label { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 13px; -fx-text-fill: -text; }
+.menu-button.settings-menu > .arrow-button { -fx-padding: 0 0 0 8; }
+.menu-button.settings-menu > .arrow-button > .arrow { -fx-background-color: -text-muted; }
+.menu-button.settings-menu:hover, .menu-button.settings-menu:showing { -fx-background-color: -hover; -fx-border-color: -text-muted; }
+.menu-button.settings-menu:focus-visible { -fx-border-color: -focus; -fx-border-width: 2; -fx-padding: 3 11 3 11; }
+.separator-menu-item > .line { -fx-border-color: -line transparent transparent transparent; -fx-padding: 4 0 0 0; }
 
 /* ---------- Sidebar: the lodge's name, today's date, the two quick actions, then the pages ---------- */
 /* No padding on the right: the current page's tab runs into the sheet */
@@ -429,30 +445,56 @@
     -fx-font-family: "Segoe UI Semibold";
 }
 .nav-button:focus-visible { -fx-border-color: -focus; -fx-border-width: 2 0 2 2; -fx-padding: 6 14 6 10; }
-/* The quick actions are clay keys: they stand off the desk, and sink a little when pressed */
-.button.quick-action {
+
+/* ---------- Quick actions: New booking and Walk-in ---------- */
+/* A tray sunk into the desk holding two keys, each with an icon badge and a line on what it is for.
+   New booking is the ink key (brass at night); Walk-in is clay. Not default buttons, so Enter stays with the page. */
+.quick-desk {
+    -fx-background-color: rgba(20,28,40,0.10), rgba(20,28,40,0.04);
+    -fx-background-insets: 0, 1 0 0 0;
+    -fx-background-radius: 14, 14;
+    -fx-padding: 6;
+}
+.root.dark .quick-desk { -fx-background-color: rgba(0,0,0,0.55), rgba(255,255,255,0.03); }
+.button.quick-tile {
     -fx-alignment: CENTER-LEFT;
     -fx-background-color: -clay-edge, linear-gradient(to bottom, -clay-top, -clay-bottom);
     -fx-background-insets: 0, 1;
     -fx-background-radius: 10, 9;
     -fx-border-color: transparent;
-    -fx-padding: 9 16 9 16;
-    -fx-min-height: 40px;
-    -fx-effect: dropshadow(gaussian, -clay-shadow, 12, 0, 0, 4);
+    -fx-padding: 8 10 8 8;
+    -fx-effect: dropshadow(gaussian, -clay-shadow, 10, 0, 0, 3);
 }
-.button.quick-action:hover { -fx-background-color: -clay-edge, -clay-top; }
-.button.quick-action:pressed { -fx-effect: dropshadow(gaussian, -clay-shadow, 4, 0, 0, 1); }
-.button.quick-action:focus-visible { -fx-border-color: -focus; -fx-border-width: 2; -fx-border-radius: 10; -fx-padding: 7 14 7 14; }
-/* New booking: the one ink button in the sidebar (not a default button, so Enter stays with the page) */
-.button.quick-primary { -fx-background-color: -ink; -fx-border-color: -ink; -fx-text-fill: -ink-text; }
-.button.quick-primary:hover { -fx-background-color: -ink-hover; -fx-border-color: -ink-hover; }
-.button.quick-primary:focus-visible {
+.button.quick-tile:hover { -fx-background-color: -clay-edge, -clay-top; }
+.button.quick-tile:pressed { -fx-translate-y: 1; -fx-effect: dropshadow(gaussian, -clay-shadow, 3, 0, 0, 1); }
+.button.quick-tile:focus-visible { -fx-border-color: -focus; -fx-border-width: 2; -fx-border-radius: 10; -fx-padding: 6 8 6 6; }
+.quick-title { -fx-font-family: "Segoe UI Semibold"; -fx-font-size: 13.5px; -fx-text-fill: -text; }
+.quick-hint { -fx-font-size: 11.5px; -fx-text-fill: -text-muted; }
+.quick-badge {
+    -fx-background-color: -paper-soft;
+    -fx-background-radius: 8;
+    -fx-border-color: -line;
+    -fx-border-radius: 8;
+    -fx-min-width: 32; -fx-min-height: 32; -fx-max-width: 32; -fx-max-height: 32;
+}
+.quick-icon { -fx-background-color: -text; -fx-min-width: 16; -fx-min-height: 16; -fx-max-width: 16; -fx-max-height: 16; }
+.quick-icon.calendar { -fx-shape: "M7 2h2v2h6V2h2v2h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2zM5 9v10h14V9z"; }
+.quick-icon.key { -fx-shape: "M7 7a5 5 0 1 1 0 10A5 5 0 0 1 7 7zm0 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm4.5 1H23v3h-2v3h-3v-3h-2v2h-3v-2h-1.5z"; }
+
+.button.quick-tile.quick-primary { -fx-background-color: -ink, -ink; }
+.button.quick-tile.quick-primary:hover { -fx-background-color: -ink-hover, -ink-hover; }
+.button.quick-tile.quick-primary:focus-visible {
     -fx-background-color: -ink, -desk, -ink;
     -fx-background-insets: 0, 2, 3;
     -fx-background-radius: 10, 8, 7;
     -fx-border-color: transparent;
-    -fx-padding: 9 16 9 16;
+    -fx-padding: 8 10 8 8;
 }
+.quick-primary .quick-title { -fx-text-fill: -ink-text; }
+.quick-primary .quick-hint { -fx-text-fill: -ink-text; -fx-opacity: 0.72; }
+.quick-primary .quick-badge { -fx-background-color: rgba(255,255,255,0.14); -fx-border-color: rgba(255,255,255,0.22); }
+.root.dark .quick-primary .quick-badge { -fx-background-color: rgba(0,0,0,0.12); -fx-border-color: rgba(0,0,0,0.18); }
+.quick-primary .quick-icon { -fx-background-color: -ink-text; }
 
 /* ---------- Status chips: small tags in the status colours ---------- */
 .chip {

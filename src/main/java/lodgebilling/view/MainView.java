@@ -2,15 +2,19 @@ package lodgebilling.view;
 
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -134,17 +138,16 @@ public class MainView extends BorderPane {
         today.getStyleClass().add("sidebar-date");
         side.getChildren().addAll(name, today);
         if (pageContext.can(Permission.MANAGE_RESERVATIONS)) {
-            // Quick actions, reachable from every page (the pages do not repeat them)
-            Button book = Ui.button("New booking", () -> quickBook(ReservationDialog.Mode.BOOK));
-            Button walkIn = Ui.button("Walk-in", () -> quickBook(ReservationDialog.Mode.WALK_IN));
-            book.getStyleClass().addAll("quick-action", "quick-primary");
-            walkIn.getStyleClass().add("quick-action");
-            book.setMaxWidth(Double.MAX_VALUE);
-            walkIn.setMaxWidth(Double.MAX_VALUE);
-            // The sidebar has no right padding (the page tabs run into the sheet), so the buttons keep their own
-            VBox.setMargin(book, new Insets(0, 14, 2, 0));
-            VBox.setMargin(walkIn, new Insets(0, 14, 18, 0));   // a gap before the pages
-            side.getChildren().addAll(book, walkIn);
+            // Quick actions, reachable from every page (the pages do not repeat them):
+            // two keys in a tray of their own, so they never pass for page tabs
+            VBox desk = new VBox(6,
+                    quickTile("New booking", "Reserve a room", "calendar", () -> quickBook(ReservationDialog.Mode.BOOK)),
+                    quickTile("Walk-in", "Check in now", "key", () -> quickBook(ReservationDialog.Mode.WALK_IN)));
+            desk.getChildren().get(0).getStyleClass().add("quick-primary");
+            desk.getStyleClass().add("quick-desk");
+            // The sidebar has no right padding (the page tabs run into the sheet), so the tray keeps its own
+            VBox.setMargin(desk, new Insets(0, 14, 18, 0));
+            side.getChildren().add(desk);
         }
         for (int i = 0; i < visible.size(); i++) {
             AppPage p = visible.get(i);
@@ -158,6 +161,28 @@ public class MainView extends BorderPane {
             side.getChildren().add(b);
         }
         return side;
+    }
+
+    /** A quick action: an icon badge, then its name with what it is for underneath. The icon's shape is in lodge.css. */
+    private static Button quickTile(String name, String hint, String icon, Runnable action) {
+        Region glyph = new Region();
+        glyph.getStyleClass().addAll("quick-icon", icon);
+        StackPane badge = new StackPane(glyph);
+        badge.getStyleClass().add("quick-badge");
+        Label title = new Label(name);
+        title.getStyleClass().add("quick-title");
+        Label caption = new Label(hint);
+        caption.getStyleClass().add("quick-hint");
+        HBox face = new HBox(10, badge, new VBox(1, title, caption));
+        face.setAlignment(Pos.CENTER_LEFT);
+
+        Button tile = Ui.button(name, action);
+        tile.setGraphic(face);
+        tile.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+        tile.setAccessibleText(name + ": " + hint);
+        tile.getStyleClass().add("quick-tile");
+        tile.setMaxWidth(Double.MAX_VALUE);
+        return tile;
     }
 
     private void quickBook(ReservationDialog.Mode mode) {
