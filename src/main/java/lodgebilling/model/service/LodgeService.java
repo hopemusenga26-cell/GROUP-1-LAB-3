@@ -17,6 +17,7 @@ import lodgebilling.model.CleaningTask;
 import lodgebilling.model.DashboardData;
 import lodgebilling.model.DayClosing;
 import lodgebilling.model.FolioCalculator;
+import lodgebilling.model.ExportTable;
 import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.GuestHistory;
@@ -922,6 +923,92 @@ public class LodgeService {
         if (closed != null) {
             throw new LodgeException("The takings for " + date.format(DAY) + " were closed by "
                     + closed.closedBy() + ". An admin must reopen the day first.");
+        }
+    }
+
+    // =====================================================================
+    // Data export (for analysis outside the app)
+    // =====================================================================
+
+    /** Bumped whenever a column is added, removed or changes meaning, so scripts can check it. */
+    public static final int EXPORT_FORMAT_VERSION = 1;
+
+    /**
+     * Every booking, every folio line and one row per day, as tables with fixed column names,
+     * for loading into Python, Excel or a database for analysis.
+     *
+     * No guest names, phone numbers or free-text notes leave the app: analysis does not need
+     * them, and a file on a laptop or USB stick is easy to lose. Instead each guest gets a
+     * guest_key, the same for every stay with the same phone number, so repeat guests can
+     * still be counted. It is a salted SHA-256 hash: the salt is random per installation and
+     * stays in the database, so the key cannot be turned back into the phone number.
+     */
+    public List<ExportTable> exportTables(Session session) {
+        session.require(Permission.VIEW_REPORTS);
+        List<Reservation> stays = reservations.findAll().stream()
+                .sorted(java.util.Comparator.comparingLong(Reservation::id)).toList();
+        String salt = exportSalt();
+
+        List<List<Object>> bookings = new ArrayList<>();
+        for (Reservation r : stays) {
+            bookings.add(List.of(r.reference(), r.status().name(), r.room().number(), r.room().type().name(),
+                    r.checkIn().toString(), r.checkOut().toString(), r.nights(), r.nightlyRate(), r.vatPercent(),
+                    r.hasCompany(), r.companyPaysRoom(), guestKey(salt, r.guestPhone()), r.createdBy(),
+                    r.createdAt().toString()));
+        }
+
+        List<List<Object>> lines = new ArrayList<>();
+        Map<Long, List<FolioEntry>> byStay = folios.findForReservations(stays.stream().map(Reservation::id).toList());
+        for (Reservation r : stays) {
+            for (FolioEntry e : byStay.getOrDefault(r.id(), List.of())) {
+                lines.add(List.of(e.id(), r.reference(), e.kind().name(), e.category(), e.amount(), e.payer().name(),
+                        e.postedAt().toString(), e.postedBy(), e.voided()));
+            }
+        }
+
+        List<List<Object>> days = new ArrayList<>();
+        LocalDate first = stays.stream().map(Reservation::checkIn).min(LocalDate::compareTo).orElse(null);
+        if (first != null && !first.isAfter(today())) {
+            for (DailyStat d : reports.daily(first, today())) {
+                days.add(List.of(d.date().toString(), d.rooms(), d.roomsSold(),
+                        BigDecimal.valueOf(d.occupancyPercent()).setScale(1, java.math.RoundingMode.HALF_UP),
+                        d.roomRevenue(), d.adr(), d.revPar(), d.paymentsReceived()));
+            }
+        }
+
+        return List.of(
+                new ExportTable("bookings", List.of("booking_ref", "status", "room_number", "room_type", "check_in",
+                        "check_out", "nights", "nightly_rate_k", "vat_percent", "has_company", "company_pays_room",
+                        "guest_key", "created_by", "created_at"), bookings),
+                new ExportTable("folio_lines", List.of("entry_id", "booking_ref", "kind", "category", "amount_k",
+                        "payer", "posted_at", "posted_by", "voided"), lines),
+                new ExportTable("daily_stats", List.of("date", "rooms", "rooms_sold", "occupancy_pct",
+                        "room_revenue_k", "adr_k", "revpar_k", "payments_k"), days));
+    }
+
+    /** The per-installation secret for guest keys, made the first time it is needed. */
+    private String exportSalt() {
+        return settings.get("export_salt").orElseGet(() -> {
+            byte[] bytes = new byte[16];
+            new java.security.SecureRandom().nextBytes(bytes);
+            String salt = java.util.HexFormat.of().formatHex(bytes);
+            settings.put("export_salt", salt);
+            return salt;
+        });
+    }
+
+    /** 16 hex characters identifying a guest by phone, or "" if there is no usable phone number. */
+    static String guestKey(String salt, String phone) {
+        String key = phoneKey(phone);
+        if (key == null) {
+            return "";
+        }
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest((salt + ":" + key).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash, 0, 8);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is part of every Java installation", e);
         }
     }
 
