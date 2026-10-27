@@ -1,11 +1,15 @@
 package lodgebilling.model;
 
-/** Where a stay is in its life: booked -> checked in -> checked out (or cancelled before arrival). */
+/**
+ * Where a stay is in its life: booked -> checked in -> checked out. A booking can also end
+ * as cancelled (called off before arrival) or no-show (the guest never came).
+ */
 public enum ReservationStatus {
     BOOKED("Booked"),
     CHECKED_IN("In house"),
     CHECKED_OUT("Checked out"),
-    CANCELLED("Cancelled");
+    CANCELLED("Cancelled"),
+    NO_SHOW("No-show");
 
     private final String label;
 

@@ -35,6 +35,11 @@ a dashboard and reports.
   outstanding balances, payments today, recent activity
 - **Reports (admin):** daily room nights sold, occupancy, ADR and RevPAR, payments received, and who still owes
   money; both export to CSV (safe to open in Excel: values starting with = + - @ are neutralised)
+- **End of day:** a night audit lists no-shows (bookings that never arrived; one click marks them, which frees
+  the room and keeps any deposit), guests still to leave or who stayed past check-out, and rooms that are
+  dirty or under maintenance for the next arrivals. Then the cash-up: takings per member of staff and
+  payment method, the drawer counted against what it should hold, and closing the day so its payments
+  can no longer change
 - **Rates and VAT:** admins can change room prices and the VAT %. Existing bookings keep the price they were made at
 - **Receipts:** every walk-in and booking under its booking number (BK0001), with the charges, VAT and
   payments from its folio, plus the quick receipts (R001, R002, ...) saved by earlier versions. View, print,

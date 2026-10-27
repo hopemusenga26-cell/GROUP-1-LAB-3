@@ -15,6 +15,8 @@ import lodgebilling.controller.PageContext;
 import lodgebilling.model.CashUp;
 import lodgebilling.model.DayClosing;
 import lodgebilling.model.Money;
+import lodgebilling.model.NightAudit;
+import lodgebilling.model.Reservation;
 import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.security.Permission;
 import lodgebilling.view.FormDialog;
@@ -25,8 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * End of day: what each member of staff took and how, the cash counted against what the
- * drawer should hold, and closing the day so its payments can no longer change.
+ * End of day: the night audit checklist (no-shows, late departures, rooms not ready),
+ * what each member of staff took and how, the cash counted against what the drawer
+ * should hold, and closing the day so its payments can no longer change.
  */
 public class CashUpPage implements Page {
 
@@ -38,7 +41,11 @@ public class CashUpPage implements Page {
     private final Button close = Ui.compact("Close day", this::closeDay);
     private final Button reopen = Ui.compact("Reopen day", this::reopenDay);
     private final ScrollPane root;
+    private final VBox auditBox = new VBox(8);
+    private final Button noShows = Ui.compact("Mark no-shows", this::markNoShows);
+    private final VBox auditCard;
     private CashUp shown;
+    private NightAudit audit;
 
     public CashUpPage(PageContext ctx) {
         this.ctx = ctx;
@@ -64,7 +71,10 @@ public class CashUpPage implements Page {
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
 
-        VBox content = new VBox(14, Ui.row(Ui.fixed("Day"), day), metrics,
+        auditCard = Ui.card("Night audit", List.of(noShows), auditBox);
+        auditCard.managedProperty().bind(auditCard.visibleProperty());
+
+        VBox content = new VBox(14, Ui.row(Ui.fixed("Day"), day), auditCard, metrics,
                 Ui.card("Taken by each member of staff", takings),
                 Ui.card("Drawer", List.of(close, reopen), state, hint));
         content.setPadding(new Insets(16, 20, 20, 20));
@@ -103,6 +113,85 @@ public class CashUpPage implements Page {
             close.setDisable(c != null || day.getValue().isAfter(ctx.lodge().today()));
             reopen.setDisable(c == null);
         });
+        showAudit();
+    }
+
+    /** The checklist only makes sense for today: past days are already history. */
+    private void showAudit() {
+        boolean today = ctx.lodge().today().equals(day.getValue());
+        auditCard.setVisible(today);
+        audit = null;
+        if (!today) {
+            return;
+        }
+        ctx.attempt(() -> {
+            audit = ctx.lodge().nightAudit(ctx.session());
+            auditBox.getChildren().clear();
+            Label summary = new Label(audit.allClear()
+                    ? "All clear: everyone has arrived or left as booked, and the rooms for the next arrivals are ready."
+                    : audit.openItems() + " thing(s) to sort out before closing the day.");
+            summary.setWrapText(true);
+            summary.getStyleClass().setAll("label", "status", audit.allClear() ? "success" : "error");
+            auditBox.getChildren().add(summary);
+            section("No-shows (should have arrived before today)", audit.overdueArrivals(),
+                    r -> r.reference() + "  Room " + r.room().number() + "  " + r.guestName()
+                            + ", due " + r.checkIn().format(Ui.DAY));
+            section("Still to leave today (check out or extend)", audit.dueOut(),
+                    r -> r.reference() + "  Room " + r.room().number() + "  " + r.guestName());
+            section("Stayed past check-out (check out or extend)", audit.overstays(),
+                    r -> r.reference() + "  Room " + r.room().number() + "  " + r.guestName()
+                            + ", was due out " + r.checkOut().format(Ui.DAY));
+            if (!audit.roomsNotReady().isEmpty()) {
+                auditBox.getChildren().add(heading("Rooms not ready for the next guests (tell housekeeping)"));
+                for (var room : audit.roomsNotReady()) {
+                    auditBox.getChildren().add(item("Room " + room.number() + " is " + room.status()));
+                }
+            }
+            section("Expected today, not arrived yet (may still come tonight)", audit.arrivingToday(),
+                    r -> r.reference() + "  Room " + r.room().number() + "  " + r.guestName());
+            int n = audit.overdueArrivals().size();
+            noShows.setText(n == 0 ? "Mark no-shows" : "Mark " + n + " no-show" + (n == 1 ? "" : "s"));
+            noShows.setDisable(n == 0 || !ctx.can(Permission.MANAGE_RESERVATIONS));
+        });
+    }
+
+    private void section(String title, List<Reservation> stays,
+                         java.util.function.Function<Reservation, String> line) {
+        if (stays.isEmpty()) {
+            return;
+        }
+        auditBox.getChildren().add(heading(title));
+        for (Reservation r : stays) {
+            auditBox.getChildren().add(item(line.apply(r)));
+        }
+    }
+
+    private static Label heading(String text) {
+        Label l = new Label(text);
+        l.getStyleClass().add("form-label");
+        return l;
+    }
+
+    private static Label item(String text) {
+        Label l = new Label("•  " + text);
+        l.setWrapText(true);
+        return l;
+    }
+
+    private void markNoShows() {
+        if (audit == null || audit.overdueArrivals().isEmpty()) {
+            return;
+        }
+        int n = audit.overdueArrivals().size();
+        if (!Ui.confirm(ctx.owner(), ctx.theme(), "Mark " + n + " booking" + (n == 1 ? "" : "s") + " as no-show?",
+                "Their rooms become free from today and nothing is charged. A deposit already paid is kept; "
+                        + "an admin can void it if the lodge decides to refund it.", "Mark no-shows")) {
+            return;
+        }
+        if (ctx.attempt(() -> ctx.lodge().markOverdueNoShows(ctx.session()))) {
+            ctx.success(n + " booking" + (n == 1 ? "" : "s") + " marked as no-show.");
+        }
+        refresh();
     }
 
     private static String describe(BigDecimal difference) {
@@ -115,6 +204,12 @@ public class CashUpPage implements Page {
 
     private void closeDay() {
         CashUp day = shown;
+        if (audit != null && !audit.allClear() && !Ui.confirm(ctx.owner(), ctx.theme(),
+                "The night audit has " + audit.openItems() + " open item(s)",
+                "Close the day anyway? You can still sort them out afterwards, but tomorrow's "
+                        + "dashboard and room board will be wrong until you do.", "Close anyway")) {
+            return;
+        }
         FormDialog form = new FormDialog(ctx.owner(), ctx.theme(), "Close day",
                 "Count the cash for " + day.date().format(Ui.DATE), "Close day", "Cancel");
         form.addNote("The drawer should hold " + Money.format(day.expectedCash()) + " in cash.");

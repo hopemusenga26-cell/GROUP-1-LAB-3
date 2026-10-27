@@ -41,6 +41,35 @@ final class Migrations {
                 if (!hasColumn(st, "users", "last_login_at")) {
                     st.execute("ALTER TABLE users ADD COLUMN last_login_at TEXT");
                 }
+            }),
+            new Migration(2, "Allow the NO_SHOW booking status for the night audit", st -> {
+                // SQLite cannot edit a CHECK rule in place, so the table is rebuilt the way the
+                // SQLite manual describes: make the new table, copy every row, swap it in.
+                st.execute("""
+                    CREATE TABLE reservations_new (
+                        id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                        guest_name         TEXT    NOT NULL,
+                        guest_phone        TEXT    NOT NULL DEFAULT '',
+                        company            TEXT    NOT NULL DEFAULT '',
+                        company_pays_room  INTEGER NOT NULL DEFAULT 0,
+                        room_id            INTEGER NOT NULL REFERENCES rooms(id),
+                        check_in           TEXT    NOT NULL,
+                        check_out          TEXT    NOT NULL,
+                        status             TEXT    NOT NULL DEFAULT 'BOOKED'
+                            CHECK (status IN ('BOOKED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW')),
+                        nightly_rate       TEXT    NOT NULL,
+                        vat_percent        TEXT    NOT NULL,
+                        notes              TEXT    NOT NULL DEFAULT '',
+                        created_by         TEXT    NOT NULL,
+                        created_at         TEXT    NOT NULL,
+                        CHECK (check_out > check_in)
+                    )""");
+                String columns = "id, guest_name, guest_phone, company, company_pays_room, room_id, check_in, "
+                        + "check_out, status, nightly_rate, vat_percent, notes, created_by, created_at";
+                st.execute("INSERT INTO reservations_new (" + columns + ") SELECT " + columns + " FROM reservations");
+                st.execute("DROP TABLE reservations");
+                st.execute("ALTER TABLE reservations_new RENAME TO reservations");
+                st.execute("CREATE INDEX IF NOT EXISTS idx_res_room_dates ON reservations(room_id, check_in, check_out)");
             })
     );
 

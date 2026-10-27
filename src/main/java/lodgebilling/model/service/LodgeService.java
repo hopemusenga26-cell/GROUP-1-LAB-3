@@ -20,6 +20,7 @@ import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.GuestHistory;
 import lodgebilling.model.Money;
+import lodgebilling.model.NightAudit;
 import lodgebilling.model.Payer;
 import lodgebilling.model.PaymentLine;
 import lodgebilling.model.PaymentMethod;
@@ -482,10 +483,11 @@ public class LodgeService {
         }).toList();
     }
 
-    /** Every booking and walk-in (except cancelled ones) as a receipt, with its folio's figures. */
+    /** Every booking and walk-in (except cancelled ones and no-shows) as a receipt, with its folio's figures. */
     public List<Bill> stayReceipts() {
         List<Reservation> stays = reservations.findAll().stream()
-                .filter(r -> r.status() != ReservationStatus.CANCELLED).toList();
+                .filter(r -> r.status() != ReservationStatus.CANCELLED && r.status() != ReservationStatus.NO_SHOW)
+                .toList();
         Map<Long, FolioSummary> sums = summaries(stays);
         return stays.stream().map(r -> Bill.forStay(r, sums.get(r.id()))).toList();
     }
@@ -519,8 +521,9 @@ public class LodgeService {
         session.require(Permission.POST_FOLIO);
         Folio folio = folio(reservationId);
         Reservation r = folio.stay();
-        if (r.status() == ReservationStatus.CANCELLED) {
-            throw new LodgeException("This booking was cancelled.");
+        if (r.status() == ReservationStatus.CANCELLED || r.status() == ReservationStatus.NO_SHOW) {
+            throw new LodgeException("This booking was " + r.status().toString().toLowerCase()
+                    + (r.status() == ReservationStatus.NO_SHOW ? " (the guest never came)." : "."));
         }
         Objects.requireNonNull(method, "method");
         checkAmount(amount);
@@ -705,7 +708,8 @@ public class LodgeService {
             case CHECKED_IN -> 0;
             case BOOKED -> 1;
             case CHECKED_OUT -> 2;
-            case CANCELLED -> 3;
+            case NO_SHOW -> 3;
+            case CANCELLED -> 4;
         };
     }
 
@@ -746,6 +750,89 @@ public class LodgeService {
     // =====================================================================
     // End of day
     // =====================================================================
+
+    /**
+     * The night audit: no-shows, guests still to arrive or leave, guests who stayed past their
+     * check-out, and rooms not ready for the next arrivals. Read-only; nothing is changed.
+     */
+    public NightAudit nightAudit(Session session) {
+        session.require(Permission.CASH_UP);
+        LocalDate today = today();
+        List<Reservation> overdue = new ArrayList<>();
+        List<Reservation> arriving = new ArrayList<>();
+        List<Reservation> dueOut = new ArrayList<>();
+        List<Reservation> overstays = new ArrayList<>();
+        Map<Long, Room> notReady = new java.util.LinkedHashMap<>();
+        for (Reservation r : reservations.findAll()) {
+            if (r.status() == ReservationStatus.BOOKED) {
+                if (r.checkIn().isBefore(today)) {
+                    overdue.add(r);
+                } else if (r.checkIn().equals(today)) {
+                    arriving.add(r);
+                }
+                // A guest arriving today or tomorrow needs a clean, working room
+                if (!r.checkIn().isAfter(today.plusDays(1)) && !r.checkIn().isBefore(today)) {
+                    Room room = rooms.findById(r.room().id()).orElse(r.room());
+                    if (room.status() == RoomStatus.DIRTY || room.status() == RoomStatus.MAINTENANCE) {
+                        notReady.put(room.id(), room);
+                    }
+                }
+            } else if (r.status() == ReservationStatus.CHECKED_IN) {
+                if (r.checkOut().isBefore(today)) {
+                    overstays.add(r);
+                } else if (r.checkOut().equals(today)) {
+                    dueOut.add(r);
+                }
+            }
+        }
+        java.util.Comparator<Reservation> byRoom = java.util.Comparator.comparing(r -> r.room().number());
+        overdue.sort(java.util.Comparator.comparing(Reservation::checkIn).thenComparing(byRoom));
+        arriving.sort(byRoom);
+        dueOut.sort(byRoom);
+        overstays.sort(byRoom);
+        boolean closed = cashUps.closing(today).isPresent();
+        List<Room> rooms = new ArrayList<>(notReady.values());
+        rooms.sort(java.util.Comparator.comparing(Room::number));
+        return new NightAudit(today, overdue, arriving, dueOut, overstays, List.copyOf(rooms), closed);
+    }
+
+    /**
+     * Records that the guest never came. The room is free again from today, nothing is charged,
+     * and a deposit already paid is kept (a no-show forfeits it; an admin can void it to refund).
+     */
+    public void markNoShow(Session session, long id) throws LodgeException {
+        session.require(Permission.MANAGE_RESERVATIONS);
+        Reservation r = reservation(id);
+        if (r.status() != ReservationStatus.BOOKED) {
+            throw new LodgeException("Only a booking whose guest has not arrived can be a no-show (this one is "
+                    + r.status() + ").");
+        }
+        if (r.checkIn().isAfter(today())) {
+            throw new LodgeException(r.guestName() + " is not due until " + r.checkIn().format(DAY)
+                    + ". Cancel the booking instead if they are not coming.");
+        }
+        BigDecimal deposit = folio(id).summary().paid();
+        reservations.setStatus(id, ReservationStatus.NO_SHOW);
+        audit.record(session.username(), AuditAction.BOOKING_NO_SHOW, describe(r)
+                + (deposit.signum() > 0 ? " (deposit " + Money.format(deposit) + " kept)" : ""));
+    }
+
+    /** Marks every booking that should have arrived before today as a no-show. Returns how many. */
+    public int markOverdueNoShows(Session session) throws LodgeException {
+        session.require(Permission.MANAGE_RESERVATIONS);
+        List<Reservation> overdue = nightAudit(session).overdueArrivals();
+        database.inTransaction(() -> {
+            for (Reservation r : overdue) {
+                try {
+                    markNoShow(session, r.id());
+                } catch (LodgeException e) {
+                    throw new IllegalStateException(e);   // cannot happen: the audit just listed it
+                }
+            }
+            return null;
+        });
+        return overdue.size();
+    }
 
     /** What was taken on that day, by whom and how, and whether the day has been closed. */
     public CashUp cashUp(Session session, LocalDate date) throws LodgeException {
