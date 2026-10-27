@@ -17,7 +17,8 @@ a dashboard and reports.
 - Account lockout: 5 wrong passwords lock the account for 5 minutes
 - Change your own password; an admin can reset a password and force a change at next sign-in
 - **Rooms:** nine rooms seeded on first start (101-104 Standard, 201-203 Deluxe, 301-302 Family); admins can add more.
-  Housekeeping marks rooms Available, Dirty or Under maintenance
+  Housekeeping marks rooms Available, Dirty or Under maintenance, and gets a **to-clean list**: dirty rooms and
+  rooms whose guest leaves today, the ones a guest arrives in soonest at the top, with a Done button
 - **Bookings:** book ahead or check in a walk-in; double-booking a room is refused; edit, cancel, check in, check out.
   A walk-in can pay in the same window (in full or a deposit): the booking, check-in and payment are saved
   together, so a refused payment leaves no half-made booking behind

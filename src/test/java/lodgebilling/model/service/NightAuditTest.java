@@ -1,6 +1,7 @@
 package lodgebilling.model.service;
 
 import lodgebilling.dao.Database;
+import lodgebilling.model.CleaningTask;
 import lodgebilling.model.NightAudit;
 import lodgebilling.model.Payer;
 import lodgebilling.model.PaymentMethod;
@@ -125,5 +126,19 @@ class NightAuditTest {
     void housekeepingCannotRunTheAudit() {
         assertThrows(AccessDeniedException.class, () -> on14.nightAudit(CLEANER));
         assertThrows(AccessDeniedException.class, () -> on14.markOverdueNoShows(CLEANER));
+    }
+
+    @Test
+    void housekeepingSeesTheRoomsNeededSoonestFirstAndNoGuestNames() throws LodgeException {
+        on12.book(DESK, form("Early Bird", "104", D14, D14.plusDays(1)));
+        on12.setRoomStatus(DESK, room(on12, "104"), RoomStatus.DIRTY);   // guest arrives today: most urgent
+        on12.setRoomStatus(DESK, room(on12, "103"), RoomStatus.DIRTY);   // nobody booked: can wait
+
+        List<CleaningTask> tasks = on14.cleaningList(CLEANER);
+        assertEquals(List.of("104", "301", "103", "201", "202"), tasks.stream().map(t -> t.room().number()).toList());
+        assertEquals("Guest arriving today", tasks.get(0).urgency(D14));
+        assertEquals("Guest arriving tomorrow", tasks.get(1).urgency(D14));
+        assertEquals("No guest booked", tasks.get(2).urgency(D14));
+        assertTrue(tasks.get(3).afterCheckOut());   // 201's guest is still in the room, leaving today
     }
 }

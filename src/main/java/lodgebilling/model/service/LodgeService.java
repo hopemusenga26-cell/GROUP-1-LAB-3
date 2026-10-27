@@ -13,6 +13,7 @@ import lodgebilling.dao.ReservationDao;
 import lodgebilling.dao.RoomDao;
 import lodgebilling.dao.SettingsDao;
 import lodgebilling.model.ChargeCategory;
+import lodgebilling.model.CleaningTask;
 import lodgebilling.model.DashboardData;
 import lodgebilling.model.DayClosing;
 import lodgebilling.model.FolioCalculator;
@@ -210,6 +211,37 @@ public class LodgeService {
     }
 
     /** Housekeeping: Available / Dirty / Maintenance. Occupied is set only by check-in. */
+    /**
+     * Housekeeping's list: every dirty room, plus rooms whose guest leaves today, soonest
+     * next arrival first, so the rooms needed tonight are cleaned before the ones that can wait.
+     */
+    public List<CleaningTask> cleaningList(Session session) {
+        session.require(Permission.UPDATE_ROOM_STATUS);
+        LocalDate today = today();
+        Map<Long, LocalDate> nextArrival = new java.util.HashMap<>();
+        java.util.Set<Long> leavingToday = new java.util.HashSet<>();
+        for (Reservation r : reservations.findAll()) {
+            if (r.status() == ReservationStatus.BOOKED && !r.checkIn().isBefore(today)) {
+                nextArrival.merge(r.room().id(), r.checkIn(), (a, b) -> a.isBefore(b) ? a : b);
+            } else if (r.status() == ReservationStatus.CHECKED_IN && !r.checkOut().isAfter(today)) {
+                leavingToday.add(r.room().id());
+            }
+        }
+        List<CleaningTask> tasks = new ArrayList<>();
+        for (Room room : rooms.findAll()) {
+            boolean dirty = room.status() == RoomStatus.DIRTY;
+            boolean leaving = room.status() == RoomStatus.OCCUPIED && leavingToday.contains(room.id());
+            if (dirty || leaving) {
+                tasks.add(new CleaningTask(room, nextArrival.get(room.id()), leaving));
+            }
+        }
+        // Soonest arrival first; rooms nobody is booked into last; then by room number
+        tasks.sort(java.util.Comparator.comparing(CleaningTask::nextArrival,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(t -> t.room().number()));
+        return tasks;
+    }
+
     public void setRoomStatus(Session session, Room room, RoomStatus status) throws LodgeException {
         session.require(Permission.UPDATE_ROOM_STATUS);
         Room current = rooms.findById(room.id()).orElseThrow(() -> new LodgeException("That room no longer exists."));
