@@ -1,5 +1,7 @@
 # Lodge Billing System
 
+![Build and test](https://github.com/hopemusenga26-cell/GROUP-1-LAB-3/actions/workflows/tests.yml/badge.svg)
+
 **GROUP-1-LAB-3**
 
 A desktop application (JavaFX) that runs a small lodge's front desk: bookings and walk-ins, a tape chart of
