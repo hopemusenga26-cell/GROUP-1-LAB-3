@@ -12,6 +12,8 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** A database from the previous version must open without losing anyone's account. */
 class DatabaseUpgradeTest {
@@ -50,5 +52,32 @@ class DatabaseUpgradeTest {
         try (Database db = Database.open(file)) {
             assertEquals(at, new SqliteUserDao(db).findAll().get(0).lastLogin());
         }
+    }
+
+    @Test
+    void aNewDatabaseIsAtTheLatestSchemaAndReopeningChangesNothing(@TempDir Path dir) {
+        Path file = dir.resolve("new.db");
+        int version;
+        try (Database db = Database.open(file)) {
+            version = db.schemaVersion();
+            assertEquals(Migrations.latestVersion(), version);
+        }
+        try (Database db = Database.open(file)) {
+            assertEquals(version, db.schemaVersion());
+        }
+    }
+
+    @Test
+    void aDatabaseFromANewerAppIsRefusedInsteadOfDamaged(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("future.db");
+        try (Database db = Database.open(file)) {
+            assertEquals(Migrations.latestVersion(), db.schemaVersion());
+        }
+        try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + file);
+             Statement st = c.createStatement()) {
+            st.execute("INSERT INTO schema_migrations VALUES (999, 'from the future', '2030-01-01T00:00:00Z')");
+        }
+        DataException e = assertThrows(DataException.class, () -> Database.open(file));
+        assertTrue(e.getMessage().contains("newer version"), e.getMessage());
     }
 }

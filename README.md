@@ -109,6 +109,15 @@ renamed to `receipts.tsv.imported`.
 
 Passwords are never stored: each one is kept as a salted PBKDF2 hash.
 
+### Database upgrades
+
+When a new version changes the tables, the change is a numbered **migration** in
+`dao/Migrations.java`. The database remembers which ones it already has (table `schema_migrations`), and
+on start-up the app applies any newer ones, in order, each all-or-nothing. So you can `git pull` at any
+time and keep your data. A database last opened by a *newer* version of the app is refused rather than
+risked: update the app first. When you change the schema, add a migration at the end of the list;
+never edit an old one or the `CREATE TABLE` statements in `Database`.
+
 ## Keyboard shortcuts
 
 | Shortcut | Action                                |
