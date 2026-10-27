@@ -382,4 +382,10 @@ class LodgeServiceTest {
         assertThrows(LodgeException.class,
                 () -> lodge.update(DESK, other.id(), form("Mary Banda", "301", TODAY.plusDays(3), TODAY.plusDays(4))));
     }
+
+    @Test
+    void aGuestWithAnInitialCanBeBooked() throws LodgeException {
+        Reservation r = lodge.book(DESK, form("John M. Phiri", "102", TODAY.plusDays(1), TODAY.plusDays(2)));
+        assertEquals("John M. Phiri", r.guestName());
+    }
 }

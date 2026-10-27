@@ -24,6 +24,7 @@ import lodgebilling.model.Payer;
 import lodgebilling.model.PaymentLine;
 import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.RateCard;
+import lodgebilling.model.PersonName;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationForm;
 import lodgebilling.model.ReservationStatus;
@@ -61,7 +62,6 @@ public class LodgeService {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM yyyy");
 
-    private static final String NAME_PATTERN = "\\p{L}+([ '’\\-.]\\p{L}+)*";
     private static final String PHONE_PATTERN = "[+0-9 ()\\-]{0,20}";
 
     /** A record of what a stay costs, plus its lines, for the folio window. */
@@ -816,8 +816,8 @@ public class LodgeService {
     // =====================================================================
 
     private void checkForm(ReservationForm f, long ignoreId) throws LodgeException {
-        if (f.guestName().length() < 2 || f.guestName().length() > 60 || !f.guestName().matches(NAME_PATTERN)) {
-            throw new LodgeException("Enter the guest's name (letters, spaces, hyphens, apostrophes).");
+        if (f.guestName().length() < 2 || f.guestName().length() > 60 || !PersonName.isValid(f.guestName())) {
+            throw new LodgeException("Enter the guest's name (letters, spaces, hyphens, apostrophes, initials like J. M.).");
         }
         if (!f.phone().matches(PHONE_PATTERN)) {
             throw new LodgeException("The phone number may contain digits, spaces, +, - and brackets only.");
