@@ -130,6 +130,21 @@ Dates are ISO (`2026-10-27`), money is plain kwacha decimals, files are UTF-8 wi
 `manifest.json` is written last, so if it is missing the export did not finish. If a column ever changes,
 `format_version` goes up.
 
+### Analysing an export
+
+`analysis/analyze_export.py` checks an export against the format above (manifest, columns, row counts) and
+prints occupancy, ADR, RevPAR, payments by method, the no-show rate, average stay and repeat guests:
+
+```
+py -m pip install -r analysis\requirements.txt
+py analysis\analyze_export.py data
+py analysis\analyze_export.py data --json > summary.json
+py -m pytest analysis
+```
+
+Given a folder of exports it uses the newest finished one. It stops with exit code 2 if the export is
+incomplete or in a format it does not know, rather than printing wrong numbers.
+
 ### Database upgrades
 
 When a new version changes the tables, the change is a numbered **migration** in
