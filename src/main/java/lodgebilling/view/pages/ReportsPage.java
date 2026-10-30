@@ -15,6 +15,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import lodgebilling.controller.PageContext;
@@ -22,10 +23,12 @@ import lodgebilling.model.DailyStat;
 import lodgebilling.model.Money;
 import lodgebilling.model.service.LodgeService;
 import lodgebilling.controller.CsvWriter;
+import lodgebilling.controller.DataExporter;
 import lodgebilling.view.Ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -59,7 +62,8 @@ public class ReportsPage implements Page {
         // The report follows the dates as they are picked, so there is no Run button
         from.valueProperty().addListener((o, a, b) -> refresh());
         to.valueProperty().addListener((o, a, b) -> refresh());
-        HBox controls = Ui.row(Ui.fixed("From"), from, Ui.fixed("to"), to);
+        HBox controls = Ui.row(Ui.fixed("From"), from, Ui.fixed("to"), to, Ui.spacer(),
+                Ui.compact("Export all data...", this::exportAll));
 
         buildDailyTable();
         buildOwingTable();
@@ -187,6 +191,34 @@ public class ReportsPage implements Page {
         export("outstanding-balances-" + ctx.lodge().today() + ".csv",
                 List.of("reference", "guest", "company", "room", "check_in", "check_out", "status", "total_k",
                         "paid_k", "balance_k"), rows, "Outstanding balances");
+    }
+
+    /**
+     * Every booking, folio line and day as CSV files plus a manifest, for analysis in Python,
+     * Excel or a database. Guest names and phone numbers are left out (see LodgeService.exportTables).
+     */
+    private void exportAll() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Choose where to save the data export");
+        File data = new File("data");
+        if (data.isDirectory()) {
+            chooser.setInitialDirectory(data);   // kept out of Git, like the database itself
+        }
+        File parent = chooser.showDialog(ctx.owner());
+        if (parent == null) {
+            return;
+        }
+        ctx.attempt(() -> {
+            try {
+                Path folder = DataExporter.export(ctx.lodge().exportTables(ctx.session()), parent.toPath(),
+                        java.time.LocalDateTime.now());
+                ctx.lodge().recordExport(ctx.session(), "Full data export -> " + folder.getFileName());
+                ctx.success("Exported to " + folder.toAbsolutePath()
+                        + " (no guest names or phone numbers are included).");
+            } catch (IOException e) {
+                ctx.error("Could not write the export: " + e.getMessage());
+            }
+        });
     }
 
     private void export(String name, List<String> header, List<List<Object>> rows, String what) {

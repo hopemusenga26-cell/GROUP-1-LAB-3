@@ -1,5 +1,7 @@
 # Lodge Billing System
 
+![Build and test](https://github.com/hopemusenga26-cell/GROUP-1-LAB-3/actions/workflows/tests.yml/badge.svg)
+
 **GROUP-1-LAB-3**
 
 A desktop application (JavaFX) that runs a small lodge's front desk: bookings and walk-ins, a tape chart of
@@ -15,7 +17,8 @@ a dashboard and reports.
 - Account lockout: 5 wrong passwords lock the account for 5 minutes
 - Change your own password; an admin can reset a password and force a change at next sign-in
 - **Rooms:** nine rooms seeded on first start (101-104 Standard, 201-203 Deluxe, 301-302 Family); admins can add more.
-  Housekeeping marks rooms Available, Dirty or Under maintenance
+  Housekeeping marks rooms Available, Dirty or Under maintenance, and gets a **to-clean list**: dirty rooms and
+  rooms whose guest leaves today, the ones a guest arrives in soonest at the top, with a Done button
 - **Bookings:** book ahead or check in a walk-in; double-booking a room is refused; edit, cancel, check in, check out.
   A walk-in can pay in the same window (in full or a deposit): the booking, check-in and payment are saved
   together, so a refused payment leaves no half-made booking behind
@@ -33,6 +36,14 @@ a dashboard and reports.
   outstanding balances, payments today, recent activity
 - **Reports (admin):** daily room nights sold, occupancy, ADR and RevPAR, payments received, and who still owes
   money; both export to CSV (safe to open in Excel: values starting with = + - @ are neutralised)
+- **Data export (admin):** Reports > *Export all data* writes a dated folder with `bookings.csv`, `folio_lines.csv`,
+  `daily_stats.csv` and a `manifest.json` (format version, row counts), ready for Python, Excel or a database.
+  No guest names, phone numbers or notes are exported; a salted hash (`guest_key`) still lets you count repeat guests
+- **End of day:** a night audit lists no-shows (bookings that never arrived; one click marks them, which frees
+  the room and keeps any deposit), guests still to leave or who stayed past check-out, and rooms that are
+  dirty or under maintenance for the next arrivals. Then the cash-up: takings per member of staff and
+  payment method, the drawer counted against what it should hold, and closing the day so its payments
+  can no longer change
 - **Rates and VAT:** admins can change room prices and the VAT %. Existing bookings keep the price they were made at
 - **Receipts:** every walk-in and booking under its booking number (BK0001), with the charges, VAT and
   payments from its folio, plus the quick receipts (R001, R002, ...) saved by earlier versions. View, print,
@@ -106,6 +117,27 @@ the database automatically on the first start, keeping their receipt numbers. Th
 renamed to `receipts.tsv.imported`.
 
 Passwords are never stored: each one is kept as a salted PBKDF2 hash.
+
+### Data export format (version 1)
+
+| File | One row per | Columns |
+| ---- | ----------- | ------- |
+| `bookings.csv` | booking or walk-in | booking_ref, status, room_number, room_type, check_in, check_out, nights, nightly_rate_k, vat_percent, has_company, company_pays_room, guest_key, created_by, created_at |
+| `folio_lines.csv` | charge, payment or refund | entry_id, booking_ref, kind, category, amount_k, payer, posted_at, posted_by, voided |
+| `daily_stats.csv` | day, first check-in to today | date, rooms, rooms_sold, occupancy_pct, room_revenue_k, adr_k, revpar_k, payments_k |
+
+Dates are ISO (`2026-10-27`), money is plain kwacha decimals, files are UTF-8 without a byte-order mark.
+`manifest.json` is written last, so if it is missing the export did not finish. If a column ever changes,
+`format_version` goes up.
+
+### Database upgrades
+
+When a new version changes the tables, the change is a numbered **migration** in
+`dao/Migrations.java`. The database remembers which ones it already has (table `schema_migrations`), and
+on start-up the app applies any newer ones, in order, each all-or-nothing. So you can `git pull` at any
+time and keep your data. A database last opened by a *newer* version of the app is refused rather than
+risked: update the app first. When you change the schema, add a migration at the end of the list;
+never edit an old one or the `CREATE TABLE` statements in `Database`.
 
 ## Keyboard shortcuts
 

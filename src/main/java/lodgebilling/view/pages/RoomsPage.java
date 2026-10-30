@@ -17,6 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lodgebilling.controller.PageContext;
+import lodgebilling.model.CleaningTask;
 import lodgebilling.model.Money;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationStatus;
@@ -28,6 +29,7 @@ import lodgebilling.view.FormDialog;
 import lodgebilling.view.Ui;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,8 @@ import java.util.Map;
  * The Show list (with counts) narrows the board to Available, Occupied, Dirty or
  * Maintenance rooms. Select a tile (click, or Tab + Space), then mark it clean,
  * dirty or under maintenance. Admins can also add, edit and delete rooms.
+ * Above the board, housekeeping's list of rooms to clean puts the rooms a guest
+ * arrives in soonest at the top.
  */
 public class RoomsPage implements Page {
 
@@ -49,6 +53,7 @@ public class RoomsPage implements Page {
     private List<Room> rooms = List.of();
     private Map<Long, Reservation> inHouse = Map.of();
     private RoomStatus shown;   // null = all rooms
+    private final VBox cleaning = new VBox(6);
 
     public RoomsPage(PageContext ctx) {
         this.ctx = ctx;
@@ -84,7 +89,8 @@ public class RoomsPage implements Page {
         });
         Label show = Ui.fixed("Show");
         show.setLabelFor(filter);
-        root = new VBox(12, actions, Ui.row(show, filter), scroll);
+        VBox cleaningCard = Ui.card("To clean, most urgent first", cleaning);
+        root = new VBox(12, actions, cleaningCard, Ui.row(show, filter), scroll);
         root.setPadding(new Insets(16, 20, 16, 20));
     }
 
@@ -106,7 +112,41 @@ public class RoomsPage implements Page {
             inHouse = guests;
             buildFilters();
             showTiles();
+            showCleaning(ctx.lodge().cleaningList(ctx.session()));
         });
+    }
+
+    /** Housekeeping's list: one line per room, with a Done button for rooms that can be cleaned now. */
+    private void showCleaning(List<CleaningTask> tasks) {
+        cleaning.getChildren().clear();
+        if (tasks.isEmpty()) {
+            Label none = new Label("Nothing to clean right now.");
+            none.getStyleClass().add("hint");
+            cleaning.getChildren().add(none);
+            return;
+        }
+        LocalDate today = ctx.lodge().today();
+        for (CleaningTask t : tasks) {
+            Label room = Ui.fixed("Room " + t.room().number());
+            room.getStyleClass().add("form-label");
+            room.setMinWidth(90);
+            Label when = Ui.chip(t.urgency(today), t.urgent(today) ? "status-dirty" : "status-available");
+            Label what = new Label(t.afterCheckOut() ? "Guest leaves today: clean once they have checked out"
+                    : t.room().type() + ", dirty");
+            what.getStyleClass().add("hint");
+            HBox line = Ui.row(room, when, what, Ui.spacer());
+            if (!t.afterCheckOut()) {
+                line.getChildren().add(Ui.compact("Done", () -> markCleaned(t.room())));
+            }
+            cleaning.getChildren().add(line);
+        }
+    }
+
+    private void markCleaned(Room room) {
+        if (ctx.attempt(() -> ctx.lodge().setRoomStatus(ctx.session(), room, RoomStatus.AVAILABLE))) {
+            ctx.success("Room " + room.number() + " is clean and available.");
+        }
+        refresh();
     }
 
     /** One choice in the Show list: a status (null for all rooms) and how many rooms have it. */

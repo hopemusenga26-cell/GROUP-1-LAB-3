@@ -19,6 +19,9 @@ public final class Database implements AutoCloseable {
 
     // Money is stored as TEXT (BigDecimal.toPlainString) so no amount is ever
     // rounded by floating point. Timestamps are ISO-8601 TEXT, which sorts correctly.
+    //
+    // This is the frozen starting point of the schema. Do not edit these statements:
+    // existing databases would never see the change. Add a numbered step to Migrations instead.
     private static final String[] SCHEMA = {
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -144,39 +147,30 @@ public final class Database implements AutoCloseable {
     private Database(String url) {
         try {
             this.connection = DriverManager.getConnection(url);
+        } catch (SQLException e) {
+            throw new DataException("Could not open the database (" + url + ")", e);
+        }
+        try {
             try (Statement st = connection.createStatement()) {
                 st.execute("PRAGMA foreign_keys = ON");
                 for (String ddl : SCHEMA) {
                     st.execute(ddl);
                 }
-                upgrade(st);
             }
+            Migrations.run(connection);
+        } catch (SQLException | RuntimeException e) {
+            close();   // do not leave the file open (and locked on Windows) after a failed start
+            throw e instanceof DataException de ? de
+                    : new DataException("Could not prepare the database (" + url + ")", e);
+        }
+    }
+
+    /** Which numbered migration this database is at (see {@link Migrations}). */
+    public int schemaVersion() {
+        try (Statement st = connection.createStatement()) {
+            return Migrations.currentVersion(st);
         } catch (SQLException e) {
-            throw new DataException("Could not open the database (" + url + ")", e);
-        }
-    }
-
-    /**
-     * Brings a database made by an older version of the app up to date.
-     * CREATE TABLE IF NOT EXISTS never changes a table that already exists, so
-     * columns added later have to be added here, once, without touching the data.
-     */
-    private static void upgrade(Statement st) throws SQLException {
-        if (!hasColumn(st, "users", "last_login_at")) {
-            st.execute("ALTER TABLE users ADD COLUMN last_login_at TEXT");
-            LOG.info("Upgraded the users table: added last_login_at");
-        }
-    }
-
-    private static boolean hasColumn(Statement st, String table, String column) throws SQLException {
-        // table is one of our own constants, never user input, so building the SQL here is safe
-        try (java.sql.ResultSet rs = st.executeQuery("PRAGMA table_info(" + table + ")")) {
-            while (rs.next()) {
-                if (column.equalsIgnoreCase(rs.getString("name"))) {
-                    return true;
-                }
-            }
-            return false;
+            throw new DataException("Could not read the schema version", e);
         }
     }
 

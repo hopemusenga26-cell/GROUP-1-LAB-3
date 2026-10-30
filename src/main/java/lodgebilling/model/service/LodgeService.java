@@ -13,17 +13,21 @@ import lodgebilling.dao.ReservationDao;
 import lodgebilling.dao.RoomDao;
 import lodgebilling.dao.SettingsDao;
 import lodgebilling.model.ChargeCategory;
+import lodgebilling.model.CleaningTask;
 import lodgebilling.model.DashboardData;
 import lodgebilling.model.DayClosing;
 import lodgebilling.model.FolioCalculator;
+import lodgebilling.model.ExportTable;
 import lodgebilling.model.FolioEntry;
 import lodgebilling.model.FolioSummary;
 import lodgebilling.model.GuestHistory;
 import lodgebilling.model.Money;
+import lodgebilling.model.NightAudit;
 import lodgebilling.model.Payer;
 import lodgebilling.model.PaymentLine;
 import lodgebilling.model.PaymentMethod;
 import lodgebilling.model.RateCard;
+import lodgebilling.model.PersonName;
 import lodgebilling.model.Reservation;
 import lodgebilling.model.ReservationForm;
 import lodgebilling.model.ReservationStatus;
@@ -61,7 +65,6 @@ public class LodgeService {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM yyyy");
 
-    private static final String NAME_PATTERN = "\\p{L}+([ '’\\-.]\\p{L}+)*";
     private static final String PHONE_PATTERN = "[+0-9 ()\\-]{0,20}";
 
     /** A record of what a stay costs, plus its lines, for the folio window. */
@@ -209,6 +212,37 @@ public class LodgeService {
     }
 
     /** Housekeeping: Available / Dirty / Maintenance. Occupied is set only by check-in. */
+    /**
+     * Housekeeping's list: every dirty room, plus rooms whose guest leaves today, soonest
+     * next arrival first, so the rooms needed tonight are cleaned before the ones that can wait.
+     */
+    public List<CleaningTask> cleaningList(Session session) {
+        session.require(Permission.UPDATE_ROOM_STATUS);
+        LocalDate today = today();
+        Map<Long, LocalDate> nextArrival = new java.util.HashMap<>();
+        java.util.Set<Long> leavingToday = new java.util.HashSet<>();
+        for (Reservation r : reservations.findAll()) {
+            if (r.status() == ReservationStatus.BOOKED && !r.checkIn().isBefore(today)) {
+                nextArrival.merge(r.room().id(), r.checkIn(), (a, b) -> a.isBefore(b) ? a : b);
+            } else if (r.status() == ReservationStatus.CHECKED_IN && !r.checkOut().isAfter(today)) {
+                leavingToday.add(r.room().id());
+            }
+        }
+        List<CleaningTask> tasks = new ArrayList<>();
+        for (Room room : rooms.findAll()) {
+            boolean dirty = room.status() == RoomStatus.DIRTY;
+            boolean leaving = room.status() == RoomStatus.OCCUPIED && leavingToday.contains(room.id());
+            if (dirty || leaving) {
+                tasks.add(new CleaningTask(room, nextArrival.get(room.id()), leaving));
+            }
+        }
+        // Soonest arrival first; rooms nobody is booked into last; then by room number
+        tasks.sort(java.util.Comparator.comparing(CleaningTask::nextArrival,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(t -> t.room().number()));
+        return tasks;
+    }
+
     public void setRoomStatus(Session session, Room room, RoomStatus status) throws LodgeException {
         session.require(Permission.UPDATE_ROOM_STATUS);
         Room current = rooms.findById(room.id()).orElseThrow(() -> new LodgeException("That room no longer exists."));
@@ -482,10 +516,11 @@ public class LodgeService {
         }).toList();
     }
 
-    /** Every booking and walk-in (except cancelled ones) as a receipt, with its folio's figures. */
+    /** Every booking and walk-in (except cancelled ones and no-shows) as a receipt, with its folio's figures. */
     public List<Bill> stayReceipts() {
         List<Reservation> stays = reservations.findAll().stream()
-                .filter(r -> r.status() != ReservationStatus.CANCELLED).toList();
+                .filter(r -> r.status() != ReservationStatus.CANCELLED && r.status() != ReservationStatus.NO_SHOW)
+                .toList();
         Map<Long, FolioSummary> sums = summaries(stays);
         return stays.stream().map(r -> Bill.forStay(r, sums.get(r.id()))).toList();
     }
@@ -519,8 +554,9 @@ public class LodgeService {
         session.require(Permission.POST_FOLIO);
         Folio folio = folio(reservationId);
         Reservation r = folio.stay();
-        if (r.status() == ReservationStatus.CANCELLED) {
-            throw new LodgeException("This booking was cancelled.");
+        if (r.status() == ReservationStatus.CANCELLED || r.status() == ReservationStatus.NO_SHOW) {
+            throw new LodgeException("This booking was " + r.status().toString().toLowerCase()
+                    + (r.status() == ReservationStatus.NO_SHOW ? " (the guest never came)." : "."));
         }
         Objects.requireNonNull(method, "method");
         checkAmount(amount);
@@ -705,7 +741,8 @@ public class LodgeService {
             case CHECKED_IN -> 0;
             case BOOKED -> 1;
             case CHECKED_OUT -> 2;
-            case CANCELLED -> 3;
+            case NO_SHOW -> 3;
+            case CANCELLED -> 4;
         };
     }
 
@@ -746,6 +783,89 @@ public class LodgeService {
     // =====================================================================
     // End of day
     // =====================================================================
+
+    /**
+     * The night audit: no-shows, guests still to arrive or leave, guests who stayed past their
+     * check-out, and rooms not ready for the next arrivals. Read-only; nothing is changed.
+     */
+    public NightAudit nightAudit(Session session) {
+        session.require(Permission.CASH_UP);
+        LocalDate today = today();
+        List<Reservation> overdue = new ArrayList<>();
+        List<Reservation> arriving = new ArrayList<>();
+        List<Reservation> dueOut = new ArrayList<>();
+        List<Reservation> overstays = new ArrayList<>();
+        Map<Long, Room> notReady = new java.util.LinkedHashMap<>();
+        for (Reservation r : reservations.findAll()) {
+            if (r.status() == ReservationStatus.BOOKED) {
+                if (r.checkIn().isBefore(today)) {
+                    overdue.add(r);
+                } else if (r.checkIn().equals(today)) {
+                    arriving.add(r);
+                }
+                // A guest arriving today or tomorrow needs a clean, working room
+                if (!r.checkIn().isAfter(today.plusDays(1)) && !r.checkIn().isBefore(today)) {
+                    Room room = rooms.findById(r.room().id()).orElse(r.room());
+                    if (room.status() == RoomStatus.DIRTY || room.status() == RoomStatus.MAINTENANCE) {
+                        notReady.put(room.id(), room);
+                    }
+                }
+            } else if (r.status() == ReservationStatus.CHECKED_IN) {
+                if (r.checkOut().isBefore(today)) {
+                    overstays.add(r);
+                } else if (r.checkOut().equals(today)) {
+                    dueOut.add(r);
+                }
+            }
+        }
+        java.util.Comparator<Reservation> byRoom = java.util.Comparator.comparing(r -> r.room().number());
+        overdue.sort(java.util.Comparator.comparing(Reservation::checkIn).thenComparing(byRoom));
+        arriving.sort(byRoom);
+        dueOut.sort(byRoom);
+        overstays.sort(byRoom);
+        boolean closed = cashUps.closing(today).isPresent();
+        List<Room> rooms = new ArrayList<>(notReady.values());
+        rooms.sort(java.util.Comparator.comparing(Room::number));
+        return new NightAudit(today, overdue, arriving, dueOut, overstays, List.copyOf(rooms), closed);
+    }
+
+    /**
+     * Records that the guest never came. The room is free again from today, nothing is charged,
+     * and a deposit already paid is kept (a no-show forfeits it; an admin can void it to refund).
+     */
+    public void markNoShow(Session session, long id) throws LodgeException {
+        session.require(Permission.MANAGE_RESERVATIONS);
+        Reservation r = reservation(id);
+        if (r.status() != ReservationStatus.BOOKED) {
+            throw new LodgeException("Only a booking whose guest has not arrived can be a no-show (this one is "
+                    + r.status() + ").");
+        }
+        if (r.checkIn().isAfter(today())) {
+            throw new LodgeException(r.guestName() + " is not due until " + r.checkIn().format(DAY)
+                    + ". Cancel the booking instead if they are not coming.");
+        }
+        BigDecimal deposit = folio(id).summary().paid();
+        reservations.setStatus(id, ReservationStatus.NO_SHOW);
+        audit.record(session.username(), AuditAction.BOOKING_NO_SHOW, describe(r)
+                + (deposit.signum() > 0 ? " (deposit " + Money.format(deposit) + " kept)" : ""));
+    }
+
+    /** Marks every booking that should have arrived before today as a no-show. Returns how many. */
+    public int markOverdueNoShows(Session session) throws LodgeException {
+        session.require(Permission.MANAGE_RESERVATIONS);
+        List<Reservation> overdue = nightAudit(session).overdueArrivals();
+        database.inTransaction(() -> {
+            for (Reservation r : overdue) {
+                try {
+                    markNoShow(session, r.id());
+                } catch (LodgeException e) {
+                    throw new IllegalStateException(e);   // cannot happen: the audit just listed it
+                }
+            }
+            return null;
+        });
+        return overdue.size();
+    }
 
     /** What was taken on that day, by whom and how, and whether the day has been closed. */
     public CashUp cashUp(Session session, LocalDate date) throws LodgeException {
@@ -806,6 +926,92 @@ public class LodgeService {
         }
     }
 
+    // =====================================================================
+    // Data export (for analysis outside the app)
+    // =====================================================================
+
+    /** Bumped whenever a column is added, removed or changes meaning, so scripts can check it. */
+    public static final int EXPORT_FORMAT_VERSION = 1;
+
+    /**
+     * Every booking, every folio line and one row per day, as tables with fixed column names,
+     * for loading into Python, Excel or a database for analysis.
+     *
+     * No guest names, phone numbers or free-text notes leave the app: analysis does not need
+     * them, and a file on a laptop or USB stick is easy to lose. Instead each guest gets a
+     * guest_key, the same for every stay with the same phone number, so repeat guests can
+     * still be counted. It is a salted SHA-256 hash: the salt is random per installation and
+     * stays in the database, so the key cannot be turned back into the phone number.
+     */
+    public List<ExportTable> exportTables(Session session) {
+        session.require(Permission.VIEW_REPORTS);
+        List<Reservation> stays = reservations.findAll().stream()
+                .sorted(java.util.Comparator.comparingLong(Reservation::id)).toList();
+        String salt = exportSalt();
+
+        List<List<Object>> bookings = new ArrayList<>();
+        for (Reservation r : stays) {
+            bookings.add(List.of(r.reference(), r.status().name(), r.room().number(), r.room().type().name(),
+                    r.checkIn().toString(), r.checkOut().toString(), r.nights(), r.nightlyRate(), r.vatPercent(),
+                    r.hasCompany(), r.companyPaysRoom(), guestKey(salt, r.guestPhone()), r.createdBy(),
+                    r.createdAt().toString()));
+        }
+
+        List<List<Object>> lines = new ArrayList<>();
+        Map<Long, List<FolioEntry>> byStay = folios.findForReservations(stays.stream().map(Reservation::id).toList());
+        for (Reservation r : stays) {
+            for (FolioEntry e : byStay.getOrDefault(r.id(), List.of())) {
+                lines.add(List.of(e.id(), r.reference(), e.kind().name(), e.category(), e.amount(), e.payer().name(),
+                        e.postedAt().toString(), e.postedBy(), e.voided()));
+            }
+        }
+
+        List<List<Object>> days = new ArrayList<>();
+        LocalDate first = stays.stream().map(Reservation::checkIn).min(LocalDate::compareTo).orElse(null);
+        if (first != null && !first.isAfter(today())) {
+            for (DailyStat d : reports.daily(first, today())) {
+                days.add(List.of(d.date().toString(), d.rooms(), d.roomsSold(),
+                        BigDecimal.valueOf(d.occupancyPercent()).setScale(1, java.math.RoundingMode.HALF_UP),
+                        d.roomRevenue(), d.adr(), d.revPar(), d.paymentsReceived()));
+            }
+        }
+
+        return List.of(
+                new ExportTable("bookings", List.of("booking_ref", "status", "room_number", "room_type", "check_in",
+                        "check_out", "nights", "nightly_rate_k", "vat_percent", "has_company", "company_pays_room",
+                        "guest_key", "created_by", "created_at"), bookings),
+                new ExportTable("folio_lines", List.of("entry_id", "booking_ref", "kind", "category", "amount_k",
+                        "payer", "posted_at", "posted_by", "voided"), lines),
+                new ExportTable("daily_stats", List.of("date", "rooms", "rooms_sold", "occupancy_pct",
+                        "room_revenue_k", "adr_k", "revpar_k", "payments_k"), days));
+    }
+
+    /** The per-installation secret for guest keys, made the first time it is needed. */
+    private String exportSalt() {
+        return settings.get("export_salt").orElseGet(() -> {
+            byte[] bytes = new byte[16];
+            new java.security.SecureRandom().nextBytes(bytes);
+            String salt = java.util.HexFormat.of().formatHex(bytes);
+            settings.put("export_salt", salt);
+            return salt;
+        });
+    }
+
+    /** 16 hex characters identifying a guest by phone, or "" if there is no usable phone number. */
+    static String guestKey(String salt, String phone) {
+        String key = phoneKey(phone);
+        if (key == null) {
+            return "";
+        }
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest((salt + ":" + key).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash, 0, 8);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is part of every Java installation", e);
+        }
+    }
+
     public void recordExport(Session session, String what) {
         session.require(Permission.VIEW_REPORTS);
         audit.record(session.username(), AuditAction.REPORT_EXPORTED, what);
@@ -816,8 +1022,8 @@ public class LodgeService {
     // =====================================================================
 
     private void checkForm(ReservationForm f, long ignoreId) throws LodgeException {
-        if (f.guestName().length() < 2 || f.guestName().length() > 60 || !f.guestName().matches(NAME_PATTERN)) {
-            throw new LodgeException("Enter the guest's name (letters, spaces, hyphens, apostrophes).");
+        if (f.guestName().length() < 2 || f.guestName().length() > 60 || !PersonName.isValid(f.guestName())) {
+            throw new LodgeException("Enter the guest's name (letters, spaces, hyphens, apostrophes, initials like J. M.).");
         }
         if (!f.phone().matches(PHONE_PATTERN)) {
             throw new LodgeException("The phone number may contain digits, spaces, +, - and brackets only.");

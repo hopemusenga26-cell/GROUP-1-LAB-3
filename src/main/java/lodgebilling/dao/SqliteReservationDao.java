@@ -48,10 +48,10 @@ public class SqliteReservationDao implements ReservationDao {
         return found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
     }
 
-    /** Stays that hold a room on at least one night between from (inclusive) and to (exclusive). */
+    /** Stays that happened or will happen on a night between from (inclusive) and to (exclusive). */
     @Override
     public List<Reservation> findOverlapping(LocalDate from, LocalDate to) {
-        return query(SELECT + " WHERE r.status <> 'CANCELLED' AND r.check_in < ? AND r.check_out > ?"
+        return query(SELECT + " WHERE r.status NOT IN ('CANCELLED', 'NO_SHOW') AND r.check_in < ? AND r.check_out > ?"
                 + " ORDER BY m.number, r.check_in", to.toString(), from.toString());
     }
 

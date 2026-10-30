@@ -540,7 +540,7 @@
 .label.status-available, .label.stay-checked-out   { -fx-background-color: -ok-soft;      -fx-border-color: -ok;      -fx-text-fill: -ok; }
 .label.status-occupied,  .label.stay-checked-in    { -fx-background-color: -busy-soft;    -fx-border-color: -busy;    -fx-text-fill: -busy; }
 .label.status-dirty                                { -fx-background-color: -pending-soft; -fx-border-color: -pending; -fx-text-fill: -pending; }
-.label.status-maintenance, .label.stay-cancelled   { -fx-background-color: -idle-soft;    -fx-border-color: -idle;    -fx-text-fill: -idle; }
+.label.status-maintenance, .label.stay-cancelled, .label.stay-no-show { -fx-background-color: -idle-soft;    -fx-border-color: -idle;    -fx-text-fill: -idle; }
 .label.stay-booked                                 { -fx-background-color: -booked-soft;  -fx-border-color: -booked;  -fx-text-fill: -booked; }
 .label.stay-owing                                  { -fx-background-color: -busy;         -fx-border-color: -busy;    -fx-text-fill: -paper; }
 

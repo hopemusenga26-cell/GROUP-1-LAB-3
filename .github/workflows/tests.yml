@@ -1,0 +1,45 @@
+# Builds the app and runs every JUnit test on each push and pull request,
+# so nobody merges code that does not compile or breaks a test.
+name: Build and test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+# Least privilege: this workflow only needs to read the code
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older, now pointless run
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Caches Gradle downloads between runs and checks gradle-wrapper.jar is a
+      # genuine Gradle release (a tampered wrapper in a PR could run any code)
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and run tests
+        run: ./gradlew build --no-daemon
+
+      # If a test fails, keep the HTML report so you can see which one and why
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test/
+          retention-days: 7

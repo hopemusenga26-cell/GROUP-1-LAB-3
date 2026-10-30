@@ -6,8 +6,6 @@ import java.math.BigDecimal;
 /** All the form validation rules, in one place so they are easy to find and change. */
 public class BillValidator {
 
-    // Letters, with single spaces, hyphens or apostrophes between them
-    private static final String NAME_PATTERN = "\\p{L}+([ '’\\-]\\p{L}+)*";
     private static final int NAME_MIN_LENGTH = 2;
     private static final int NAME_MAX_LENGTH = 50;
     public static final int MAX_NIGHTS = 30;
@@ -30,9 +28,9 @@ public class BillValidator {
             throw new ValidationException("The name must be " + NAME_MIN_LENGTH + " to "
                     + NAME_MAX_LENGTH + " characters long.", FormField.NAME);
         }
-        if (!name.matches(NAME_PATTERN)) {
+        if (!PersonName.isValid(name)) {
             throw new ValidationException(
-                    "Use letters only in the name. Spaces, hyphens and apostrophes are allowed.",
+                    "Use letters only in the name. Spaces, hyphens, apostrophes and initials (J. M.) are allowed.",
                     FormField.NAME);
         }
 
