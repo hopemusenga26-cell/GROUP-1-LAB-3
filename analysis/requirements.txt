@@ -1,0 +1,4 @@
+# Ranges, not exact pins: group members run different Python versions on Windows, and an
+# exact old pin may have no ready-made wheel for a new Python. Tested with pandas 2.2 and 3.0.
+pandas>=2.2,<4
+pytest>=8

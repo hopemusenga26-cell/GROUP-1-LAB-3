@@ -4,3 +4,5 @@ build/
 *.class
 out/
 /data/
+__pycache__/
+.pytest_cache/
